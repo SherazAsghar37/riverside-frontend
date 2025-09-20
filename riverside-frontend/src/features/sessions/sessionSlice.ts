@@ -19,6 +19,7 @@ interface RecordingState {
   loaderStopRecording: boolean;
   videoUrl?: string;
   isMerged?: boolean;
+  startRecordingSignalFromHost?: boolean;
 }
 
 const initialState: SessionState = {
@@ -31,6 +32,8 @@ const initialState: SessionState = {
     recordingDuration: 0,
     loaderStopRecording: false,
     isMerged: false,
+    //TODO: change it to false;
+    startRecordingSignalFromHost: true,
   },
 };
 
@@ -60,6 +63,9 @@ const sessionSlice = createSlice({
     },
     setDisableCallButton(state, action: PayloadAction<boolean>) {
       state.disableCallButton = action.payload;
+    },
+    setRecordingStatusSignalFromHost(state, action: PayloadAction<boolean>) {
+      state.recordingState.startRecordingSignalFromHost = action.payload;
     },
     setConnectionStatus(
       state,
@@ -95,6 +101,7 @@ export const {
   setDisableCallButton,
   setConnectionStatus,
   setIsConnected,
+  setRecordingStatusSignalFromHost,
 } = sessionSlice.actions;
 
 export default sessionSlice.reducer;

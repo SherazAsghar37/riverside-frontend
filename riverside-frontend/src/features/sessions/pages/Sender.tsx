@@ -3,14 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import SessionHeader from "../components/SessionHeader";
 import MyCamPreview from "../components/MyCamPreview";
-import CallPreview from "../components/CallPreview";
 import SessionDetailsCard from "../components/SessionDetailsCard";
 import RecordingStatusCard from "../components/RecordingStatusCard";
-import useSessionControl from "../hooks/useSessionControl";
 import type { RootState } from "../../../app/store";
 import { useDispatch, useSelector } from "react-redux";
 import { setSessionInformation } from "../sessionSlice";
 import AllRecordingsCard from "../components/AllRecordingsCard";
+import SenderCallPreview from "../components/SenderCallPreview";
+import useHostSessionControl from "../hooks/useHostSessionControl";
 
 export default function Sender() {
   const location = useLocation();
@@ -37,12 +37,12 @@ export default function Sender() {
   const {
     socket,
     videoRef,
-    recorder,
+    mediaRecorder,
     startCall,
     startRecording,
     stopRecording,
     formatDuration,
-  } = useSessionControl();
+  } = useHostSessionControl();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -52,14 +52,14 @@ export default function Sender() {
           isConnected={isConnected}
           connectionStatus={connectionStatus}
         />
-        <MyCamPreview localVideoRef={videoRef} />
+        <MyCamPreview videoRef={videoRef} />
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Video Preview */}
-          <CallPreview
+          <SenderCallPreview
             socket={socket}
             videoRef={videoRef}
-            recorder={recorder}
+            recorder={mediaRecorder}
             startCall={startCall}
             startRecording={startRecording}
             stopRecording={stopRecording}

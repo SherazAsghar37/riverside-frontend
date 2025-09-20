@@ -8,14 +8,13 @@ import {
   stopRecording as stopRecordingState,
 } from "../sessionSlice";
 import { useAppDispatch } from "../../../hooks/ReduxHooks";
-import useMediaRecorder from "../hooks/useMediaRecorder";
-import { useWebSocketHandler } from "../hooks/useSocketHandler";
-import { useMediasoup } from "../hooks/useMediasoup";
+import useMediaRecorder from "./useMediaRecorder";
+import { useWebSocketHandler } from "./useSocketHandler";
+import { useMediasoup } from "./useMediasoup";
 
-const useSessionControl = () => {
+const useParticipantSessionControl = () => {
   const dispatch = useAppDispatch();
 
-  const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -38,17 +37,60 @@ const useSessionControl = () => {
     createDevice,
     onSenderTransportCreated,
     onProducerCreated,
+    onReceiveTransportCreated,
+    onConsumerCreated,
+    onNewProducerJoined,
+    initializeStreamInsideMediasoup,
+    streams,
   } = useMediasoup();
 
-  const { socket } = useWebSocketHandler({
+  const { socket, getRtpCapabilities } = useWebSocketHandler({
     sessionId: sessionInformation?.sessionId,
     token: localStorage.getItem("JWT") ?? "",
-    url: "ws://localhost:8080/ws",
+
     createDevice,
     onRTPCapabilitiesReceived,
     onSenderTransportCreated,
     onProducerCreated,
+    onReceiveTransportCreated,
+    onConsumerCreated,
+    onNewProducerJoined,
   });
+
+  const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
+
+  useEffect(() => {
+    if (sessionInformation?.sessionId) {
+      console.log("here calling start call");
+      startCall();
+    }
+  }, [sessionInformation?.sessionId]);
+
+  const startCall = async () => {
+    try {
+      if (!stream) {
+        dispatch(setDisableCallButton(true));
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+        let localParams = undefined;
+        if (videoRef.current) {
+          const track = stream.getVideoTracks()[0];
+          videoRef.current.srcObject = stream;
+          localParams = { ...params, track };
+          setParams((prev) => ({ ...prev, track }));
+        }
+        setStream(stream);
+        initializeStreamInsideMediasoup(stream!, localParams!);
+        initializeMediaRecorder(stream!);
+        getRtpCapabilities();
+      }
+
+      return stream;
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+    }
+  };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -60,28 +102,6 @@ const useSessionControl = () => {
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  const startCall = async () => {
-    try {
-      if (!stream) {
-        dispatch(setDisableCallButton(true));
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        if (videoRef.current) {
-          const track = stream.getVideoTracks()[0];
-          videoRef.current.srcObject = stream;
-          setParams((current) => ({ ...current, track }));
-        }
-        setStream(stream);
-      }
-      const recorder = useMediaRecorder(stream!);
-      setRecorder(recorder);
-      return stream;
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-    }
-  };
-
   const formatDuration = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -92,7 +112,7 @@ const useSessionControl = () => {
   };
 
   const startRecording = () => {
-    if (recorder) {
+    if (mediaRecorder) {
       socket?.send(
         JSON.stringify({
           type: "message",
@@ -102,14 +122,14 @@ const useSessionControl = () => {
           },
         })
       );
-      recorder.start(3000);
+      mediaRecorder.start(3000);
       dispatch(startRecordingState());
     }
   };
 
   const stopRecording = () => {
-    if (recorder) {
-      recorder.stop();
+    if (mediaRecorder) {
+      mediaRecorder.stop();
       socket?.send(
         JSON.stringify({
           type: "message",
@@ -126,7 +146,8 @@ const useSessionControl = () => {
   return {
     videoRef,
     socket,
-    recorder,
+    mediaRecorder,
+    streams,
     startCall,
     startRecording,
     stopRecording,
@@ -135,4 +156,4 @@ const useSessionControl = () => {
   };
 };
 
-export default useSessionControl;
+export default useParticipantSessionControl;

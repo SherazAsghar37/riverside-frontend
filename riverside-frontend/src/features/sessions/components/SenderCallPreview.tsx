@@ -2,7 +2,7 @@ import { Circle, Square, Video } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
 
-interface CallPreviewProps {
+interface SenderCallPreviewProps {
   socket: WebSocket | null;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   recorder: MediaRecorder | null;
@@ -12,7 +12,7 @@ interface CallPreviewProps {
   formatDuration: (seconds: number) => string;
 }
 
-const CallPreview: React.FC<CallPreviewProps> = ({
+const SenderCallPreview: React.FC<SenderCallPreviewProps> = ({
   socket,
   videoRef,
   recorder,
@@ -89,4 +89,4 @@ const CallPreview: React.FC<CallPreviewProps> = ({
   );
 };
 
-export default CallPreview;
+export default SenderCallPreview;

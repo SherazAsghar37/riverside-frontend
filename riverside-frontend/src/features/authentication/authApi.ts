@@ -1,4 +1,4 @@
-import { api } from "../../api/api";
+import { publicApi } from "../../api/api";
 
 export interface LoginCredentials {
   email: string;
@@ -11,14 +11,16 @@ export interface SignUpCredentials {
   password: string;
 }
 
-
-
 export async function loginApi(credentials: LoginCredentials) {
-  const response = await api.post('user/login', credentials);
+  const response = await publicApi.post("user/login", credentials, {
+    headers: {},
+  });
   return response.data;
 }
 
 export async function signUpApi(credentials: SignUpCredentials) {
-  const response = await api.post('user/signup', credentials);
+  const response = await publicApi.post("user/signup", credentials, {
+    headers: {},
+  });
   return response;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setConnectionStatus, setIsConnected } from "../sessionSlice";
+import { wsBaseUrl } from "../../../api/api";
 
 interface UseWebSocketHandlerOptions {
   sessionId?: string;
@@ -9,18 +10,23 @@ interface UseWebSocketHandlerOptions {
   onRTPCapabilitiesReceived?: (msg: any) => void;
   createDevice?: (ws: WebSocket, msg: any) => void;
   onSenderTransportCreated?: (msg: any, ws: WebSocket) => void;
-  onProducerCreated?: (msg: any) => void;
-  onSocketError?: (msg: any) => void;
+  onProducerCreated?: (msg: any, ws: WebSocket) => void;
+  onReceiveTransportCreated?: (msg: any, ws: WebSocket) => Promise<void>;
+  onConsumerCreated?: (ws: WebSocket, msg: any) => Promise<void>;
+  onNewProducerJoined: (ws: WebSocket, msg: any) => void;
 }
 
 export const useWebSocketHandler = ({
   sessionId,
   token,
-  url = "ws://localhost:8080/ws",
+  url = wsBaseUrl,
   onRTPCapabilitiesReceived,
   createDevice,
   onSenderTransportCreated,
   onProducerCreated,
+  onReceiveTransportCreated,
+  onConsumerCreated,
+  onNewProducerJoined,
 }: UseWebSocketHandlerOptions) => {
   const dispatch = useDispatch();
 
@@ -62,7 +68,7 @@ export const useWebSocketHandler = ({
 
       switch (msg.type) {
         case "joined":
-          onUserJoined?.(ws);
+          onUserJoined?.();
           break;
         case "routerRtpCapabilities":
           onRTPCapabilitiesReceived?.(msg);
@@ -71,11 +77,22 @@ export const useWebSocketHandler = ({
         case "sendTransportCreated":
           onSenderTransportCreated?.(msg, ws);
           break;
-        case "transportConnected":
+        case "senderTransportConnected":
           console.log("Transport connected");
           break;
         case "producerCreated":
-          onProducerCreated?.(msg);
+          onProducerCreated?.(msg, ws);
+          break;
+        case "receiveTransportCreated":
+          onReceiveTransportCreated?.(msg, ws);
+          break;
+        case "receiveTransportConnected":
+          break;
+        case "newProducerJoined":
+          onNewProducerJoined?.(ws, msg);
+          break;
+        case "consumerCreated":
+          onConsumerCreated?.(ws, msg);
           break;
         case "error":
           onSocketError?.(msg);
@@ -90,13 +107,15 @@ export const useWebSocketHandler = ({
     };
   }, [sessionId, token, url]);
 
-  const onUserJoined = (ws: WebSocket) => {
+  const onUserJoined = () => {
     setIsConnected(true);
     setConnectionStatus("Connected");
 
     console.log("WebSocket joined room:", sessionId);
+  };
 
-    ws.send(JSON.stringify({ type: "getRTPCapabilities" }));
+  const getRtpCapabilities = () => {
+    socketRef.current?.send(JSON.stringify({ type: "getRTPCapabilities" }));
   };
 
   const onSocketError = (error: any) => {
@@ -107,5 +126,6 @@ export const useWebSocketHandler = ({
 
   return {
     socket: socketRef.current,
+    getRtpCapabilities,
   };
 };
