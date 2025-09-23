@@ -1,9 +1,11 @@
 import axios from "axios";
 
 const token = localStorage.getItem("JWT");
-const host = "http://192.168.100.16:8080";
+// const host = "https://d5f98db90077.ngrok-free.app";
+const ip = "192.168.100.16:8080";
+const host = `https://${ip}`;
 
-export const wsBaseUrl = `ws://${host}/ws`;
+export const wsBaseUrl = `wss://${ip}/ws`;
 const baseURL = `${host}/api/v1/`;
 
 export const publicApi = axios.create({
@@ -19,20 +21,17 @@ export const api = axios.create({
 
 // Session api's
 export async function fetchAllSessions() {
-  const response = await axios.get(
-    `http://192.168.100.16:8080/api/v1/sessions/get-all-sessions`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await axios.get(`${host}/api/v1/sessions/get-all-sessions`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   return response;
 }
 
 export async function createSession(sessionName: string) {
   const response = await axios.post(
-    `http://192.168.100.16:8080/api/v1/sessions/create-session`,
+    `${host}/api/v1/sessions/create-session`,
     { name: sessionName },
     {
       headers: {
@@ -45,7 +44,7 @@ export async function createSession(sessionName: string) {
 
 export async function joinSession(sessionCode: string | null) {
   const response = await axios.post(
-    `http://192.168.100.16:8080/api/v1/sessions/join-session/${sessionCode}`,
+    `${host}/api/v1/sessions/join-session/${sessionCode}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -58,7 +57,7 @@ export async function joinSession(sessionCode: string | null) {
 
 export async function getSession(sessionCode: string | null) {
   const response = await axios.get(
-    `http://192.168.100.16:3001/api/v1/sessions/get-session/${sessionCode}`,
+    `${host}/api/v1/sessions/get-session/${sessionCode}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -73,32 +72,26 @@ export async function getSession(sessionCode: string | null) {
 // user auth api's
 
 export async function login(email: string, password: string) {
-  const response = await axios.post(
-    "http://192.168.100.16:8080/api/v1/user/login",
-    {
-      email: email,
-      password: password,
-    }
-  );
+  const response = await axios.post(`${host}/api/v1/user/login`, {
+    email: email,
+    password: password,
+  });
   return response;
 }
 
 export async function signUp(name: string, email: string, password: string) {
-  const response = await axios.post(
-    `http://192.168.100.16:8080/api/v1/user/signup`,
-    {
-      name: name,
-      email: email,
-      password: password,
-    }
-  );
+  const response = await axios.post(`${host}/api/v1/user/signup`, {
+    name: name,
+    email: email,
+    password: password,
+  });
   return response;
 }
 
 // Nsender & NReceiver api's
 export async function sendChunksToBackend(formData: any) {
   const response = await axios.post(
-    `http://192.168.100.16:3001/api/v1/recordings/chunks`,
+    `${host}/api/v1/recordings/chunks`,
     formData,
     {
       headers: {
@@ -115,7 +108,7 @@ export async function sendFinalCallToEndOfRecording(
   sessionId: string
 ) {
   const response = await axios.post(
-    `http://192.168.100.16:3001/api/v1/recordings/merge-upload-s3`,
+    `${host}/api/v1/recordings/merge-upload-s3`,
     { sessionName: roomName, userType, sessionId },
     {
       headers: {
@@ -128,7 +121,7 @@ export async function sendFinalCallToEndOfRecording(
 
 export async function getAllVideosApi(sessionId: string) {
   const response = await axios.get(
-    `http://192.168.100.16:3001/api/v1/recordings/get-session-videos/${sessionId}`,
+    `${host}/api/v1/recordings/get-session-videos/${sessionId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

@@ -6,10 +6,8 @@ interface sendFinalCallToEndOfRecordingProps {
   sessionId: string;
 }
 
-export async function createSessionApi(sessionName: string) {
-  const response = await api.post("sessions/create-session", {
-    name: sessionName,
-  });
+export async function createSessionApi() {
+  const response = await api.post("sessions/create-session", {});
   return response;
 }
 

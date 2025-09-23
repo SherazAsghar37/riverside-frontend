@@ -226,21 +226,28 @@ const useMediasoup = () => {
     // Accessing the media track from the consumer
     const { track } = consumer!;
     console.log("************** track", track);
+    console.log("Track kind:", track.kind);
+    console.log("Track enabled:", track.enabled);
+    console.log("Track muted:", track.muted);
+    console.log("Track readyState:", track.readyState);
 
-    // Attaching the media track to the remote video element for playback
-    // if (remoteVideoRef.current) {
-    //   remoteVideoRef.current.srcObject = new MediaStream([track]);
-    //   console.log("----------> remote video attached", remoteVideoRef.current);
-    // }
+    // Create MediaStream and verify it
+    const mediaStream = new MediaStream([track]);
+    console.log("MediaStream created:", mediaStream);
+    console.log("MediaStream active:", mediaStream.active);
+    console.log("MediaStream tracks:", mediaStream.getTracks());
 
     consumers.set(consumer.id, consumer!);
-    setStreams((prev) =>
-      new Map(prev).set(consumer.id, new MediaStream([track]))
-    );
+    setStreams((prev) => new Map(prev).set(consumer.id, mediaStream));
 
     // Notifying the server to resume media consumption
     ws.send(JSON.stringify({ type: "resumeReceiver", consumerId: params.id }));
     console.log("----------> consumer transport has resumed");
+
+    // Additional debugging - check if track receives data
+    track.onended = () => console.log("Track ended");
+    track.onmute = () => console.log("Track muted");
+    track.onunmute = () => console.log("Track unmuted");
   };
 
   return {

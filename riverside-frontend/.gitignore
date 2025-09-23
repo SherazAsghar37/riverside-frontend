@@ -2,3 +2,5 @@
 /dist
 .env
 package-lock.json
+localhost+3.pem
+localhost+3-key.pem

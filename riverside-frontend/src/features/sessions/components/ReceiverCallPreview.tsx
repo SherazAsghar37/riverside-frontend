@@ -1,107 +1,6 @@
-// import { Circle, Video } from "lucide-react";
-// import { useSelector } from "react-redux";
-// import type { RootState } from "../../../app/store";
-
-// interface ReceiverCallPreviewProps {
-//   videoRef: React.RefObject<HTMLVideoElement | null>;
-//   remoteVideoRef: MediaStream | null;
-
-//   formatDuration: (seconds: number) => string;
-// }
-
-// const ReceiverCallPreview: React.FC<ReceiverCallPreviewProps> = ({
-//   videoRef,
-//   remoteVideoRef,
-//   formatDuration,
-// }) => {
-//   const { recordingState, disableCallButton } = useSelector(
-//     (state: RootState) => state.session
-//   );
-//   const stream = remoteVideoRef;
-
-//   return (
-//     <>
-//       <div className="lg:col-span-2">
-//         <div className="bg-black rounded-2xl overflow-hidden relative">
-//           <video
-//             ref={videoRef}
-//             autoPlay
-//             playsInline
-//             className="w-full aspect-video object-cover"
-//           />
-//           {/* <video
-//             ref={stream}
-//             autoPlay
-//             playsInline
-//             className="w-full aspect-video object-cover"
-//           /> */}
-
-//           {/* Recording Indicator */}
-//           {recordingState.isRecording && (
-//             <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-500 text-white px-3 py-1 rounded-full">
-//               <Circle className="w-3 h-3 fill-current animate-pulse" />
-//               <span className="text-sm font-medium">
-//                 REC {formatDuration(recordingState.recordingDuration)}
-//               </span>
-//             </div>
-//           )}
-
-//           {/* Stream Status */}
-//           {!stream && (
-//             <div className="absolute inset-0 flex items-center justify-center bg-gray-800/50">
-//               <div className="text-center text-gray-300">
-//                 <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-//                 <p>Waiting for host to start stream...</p>
-//               </div>
-//             </div>
-//           )}
-
-//           {/* Controls Overlay */}
-//           {/* {stream && (
-//             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-//               <div className="flex items-center space-x-4 bg-black/50 backdrop-blur-sm rounded-full px-6 py-3">
-//                 {!startRecordings ? (
-//                   <button
-//                     onClick={startRecording}
-//                     className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
-//                   >
-//                     Setup Recording
-//                   </button>
-//                 ) : (
-//                   <>
-//                     {!isRecording ? (
-//                       <button
-//                         onClick={handleStartRecording}
-//                         className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors"
-//                       >
-//                         Start Recording
-//                         <Circle className="w-25 h-7" />
-//                       </button>
-//                     ) : (
-//                       <button
-//                         onClick={handleStopRecording}
-//                         className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors"
-//                       >
-//                         Stop Recording
-//                         <Square className="w-25 h-7" />
-//                       </button>
-//                     )}
-//                   </>
-//                 )}
-//               </div>
-//             </div>
-//           )} */}
-//         </div>
-//       </div>
-//     </>
-//   );
-// };
-
-// export default ReceiverCallPreview;
-
 import { Circle, Video } from "lucide-react";
 import { useSelector } from "react-redux";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { RootState } from "../../../app/store";
 
 interface ReceiverCallPreviewProps {
@@ -116,11 +15,115 @@ const ReceiverCallPreview: React.FC<ReceiverCallPreviewProps> = ({
   formatDuration,
 }) => {
   const { recordingState } = useSelector((state: RootState) => state.session);
-  console.log("Remote Video Ref in ReceiverCallPreview: ", remoteVideoRef);
-  // Attach MediaStream to video element
+  const [streamDebugInfo, setStreamDebugInfo] = useState<string>("");
+
+  // Enhanced effect with better debugging
   useEffect(() => {
-    if (videoRef.current && remoteVideoRef) {
-      videoRef.current.srcObject = remoteVideoRef;
+    const videoElement = videoRef.current;
+
+    if (videoElement && remoteVideoRef) {
+      console.log("=== Stream Assignment Debug ===");
+      console.log("Video element exists:", !!videoElement);
+      console.log("MediaStream exists:", !!remoteVideoRef);
+      console.log("MediaStream active:", remoteVideoRef.active);
+      console.log("MediaStream id:", remoteVideoRef.id);
+
+      const tracks = remoteVideoRef.getTracks();
+      console.log("Total tracks:", tracks.length);
+
+      tracks.forEach((track, index) => {
+        console.log(`Track ${index}:`, {
+          kind: track.kind,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState,
+          id: track.id,
+        });
+      });
+
+      // Set debug info for UI
+      setStreamDebugInfo(
+        `Active: ${remoteVideoRef.active}, Tracks: ${tracks.length}, ` +
+          `Video tracks: ${tracks.filter((t) => t.kind === "video").length}`
+      );
+
+      // Assign stream to video element
+      videoElement.srcObject = remoteVideoRef;
+
+      // Add event listeners for debugging
+      const handleLoadedMetadata = () => {
+        console.log("Video metadata loaded");
+        console.log(
+          "Video dimensions:",
+          videoElement.videoWidth,
+          "x",
+          videoElement.videoHeight
+        );
+
+        // Explicitly call play() when metadata is loaded
+        videoElement
+          .play()
+          .then(() => console.log("Video play successful"))
+          .catch((error) => {
+            console.warn(
+              "Autoplay prevented, user interaction may be required:",
+              error
+            );
+            // You could show a play button here if needed
+          });
+      };
+
+      const handleLoadedData = () => {
+        console.log("Video data loaded");
+
+        // Also try to play when data is loaded as a fallback
+        if (videoElement.paused) {
+          videoElement.play().catch(console.error);
+        }
+      };
+
+      const handlePlay = () => {
+        console.log("Video started playing");
+      };
+
+      const handleError = (e: any) => {
+        console.error("Video error:", e);
+      };
+
+      const handleCanPlay = () => {
+        console.log("Video can start playing");
+        // Another opportunity to ensure playback starts
+        if (videoElement.paused) {
+          videoElement.play().catch(console.error);
+        }
+      };
+
+      videoElement.addEventListener("loadedmetadata", handleLoadedMetadata);
+      videoElement.addEventListener("loadeddata", handleLoadedData);
+      videoElement.addEventListener("canplay", handleCanPlay);
+      videoElement.addEventListener("play", handlePlay);
+      videoElement.addEventListener("error", handleError);
+
+      // Initial play attempt
+      videoElement.play().catch(console.error);
+
+      // Cleanup
+      return () => {
+        videoElement.removeEventListener(
+          "loadedmetadata",
+          handleLoadedMetadata
+        );
+        videoElement.removeEventListener("loadeddata", handleLoadedData);
+        videoElement.removeEventListener("canplay", handleCanPlay);
+        videoElement.removeEventListener("play", handlePlay);
+        videoElement.removeEventListener("error", handleError);
+      };
+    } else {
+      setStreamDebugInfo("No video element or stream");
+      console.log("Missing:", {
+        videoElement: !!videoElement,
+        remoteVideoRef: !!remoteVideoRef,
+      });
     }
   }, [remoteVideoRef, videoRef]);
 
@@ -131,8 +134,16 @@ const ReceiverCallPreview: React.FC<ReceiverCallPreviewProps> = ({
           ref={videoRef}
           autoPlay
           playsInline
+          muted={true}
           className="w-full aspect-video object-cover"
         />
+
+        {/* Debug Info Overlay - Remove in production */}
+        {process.env.NODE_ENV === "development" && remoteVideoRef && (
+          <div className="absolute top-4 right-4 bg-black/70 text-white px-2 py-1 rounded text-[10px]">
+            {streamDebugInfo}
+          </div>
+        )}
 
         {/* Recording Indicator */}
         {recordingState.isRecording && (
