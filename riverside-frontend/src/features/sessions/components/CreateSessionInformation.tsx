@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import Utils from "@/app/utils";
 import { AlertCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { createSessionApi } from "../sessionApi";
 
 interface CreateSessionInformationProps {
@@ -18,16 +18,40 @@ function CreateSessionInformation({
   micBlocked,
 }: CreateSessionInformationProps) {
   const { user } = useSelector((state: RootState) => state.auth);
+  const { sessionInformation } = useSelector(
+    (state: RootState) => state.session
+  );
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const isJoiningAsHost = location.pathname.includes("host");
+  const isCreatingSession = location.pathname.includes("create-session");
+  const isJoiningAsParticipant = !isJoiningAsHost && !isCreatingSession;
+
+  const sessionCode = searchParams.get("session-code");
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [usingHeadphonesIndex, setUsingHeadphonesIndex] = useState(-1);
 
-  async function handleCreateSession() {
+  async function handleSessionAction() {
     setError(null);
     setIsLoading(true);
+    if (isCreatingSession) {
+      await createSession();
+    } else if (isJoiningAsHost) {
+      navigate(`/host?session-code=${sessionCode}`, {
+        state: { sessionId: location?.state?.sessionId },
+      });
+    } else {
+      navigate(`/participant?session-code=${sessionCode}`, {
+        state: { sessionId: location?.state?.sessionId },
+      });
+    }
+  }
 
+  const createSession = async () => {
     try {
       const response: any = await createSessionApi();
       const data = response.data;
@@ -36,7 +60,7 @@ function CreateSessionInformation({
         console.log(data);
         const sessionCode = data.sessionCode;
         const sessionId = data.sessionId;
-        navigate(`/host?sessionCode=${sessionCode}`, {
+        navigate(`/host?session-code=${sessionCode}`, {
           state: { sessionId: sessionId },
         });
       }
@@ -55,7 +79,7 @@ function CreateSessionInformation({
     } finally {
       setIsLoading(false);
     }
-  }
+  };
   return (
     <>
       <div>
@@ -106,11 +130,18 @@ function CreateSessionInformation({
         {!(camBlocked || micBlocked) && (
           <Button
             className="flex w-[100%] h-10"
-            onClick={handleCreateSession}
+            onClick={handleSessionAction}
             isLoading={isLoading}
-            disabled={usingHeadphonesIndex === -1}
+            disabled={
+              usingHeadphonesIndex === -1 ||
+              (!sessionInformation && isJoiningAsParticipant)
+            }
           >
-            Create Session
+            {isCreatingSession
+              ? "Create Session"
+              : isJoiningAsHost
+              ? "Join as Host"
+              : "Join Session"}
           </Button>
         )}
       </div>

@@ -32,7 +32,7 @@ export const useWebSocketHandler = ({
 
   const socketRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
+  const connectSocket = () => {
     const ws = new WebSocket(url);
     socketRef.current = ws;
 
@@ -77,14 +77,14 @@ export const useWebSocketHandler = ({
         case "sendTransportCreated":
           onSenderTransportCreated?.(msg, ws);
           break;
+        case "receiveTransportCreated":
+          onReceiveTransportCreated?.(msg, ws);
+          break;
         case "senderTransportConnected":
           console.log("Transport connected");
           break;
         case "producerCreated":
           onProducerCreated?.(msg, ws);
-          break;
-        case "receiveTransportCreated":
-          onReceiveTransportCreated?.(msg, ws);
           break;
         case "receiveTransportConnected":
           break;
@@ -105,11 +105,12 @@ export const useWebSocketHandler = ({
     return () => {
       ws.close();
     };
-  }, [sessionId, token, url]);
+  };
 
   const onUserJoined = () => {
     setIsConnected(true);
     setConnectionStatus("Connected");
+    getRtpCapabilities();
 
     console.log("WebSocket joined room:", sessionId);
   };
@@ -126,6 +127,6 @@ export const useWebSocketHandler = ({
 
   return {
     socket: socketRef.current,
-    getRtpCapabilities,
+    connectSocket,
   };
 };

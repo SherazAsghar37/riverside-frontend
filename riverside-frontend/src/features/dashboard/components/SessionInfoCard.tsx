@@ -1,9 +1,14 @@
 import Utils from "@/app/utils";
 import { Button } from "@/components/ui/button";
+import { stat } from "fs";
 import { Plus } from "lucide-react";
 import { IoVideocamOutline } from "react-icons/io5";
+import { MdOutlineDateRange } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 
 interface SessionInfoCardProps {
+  sessionCode: string;
+  sessionId?: string;
   createdAt: string;
   scheduledAt: string | null;
   status: string;
@@ -13,10 +18,14 @@ function SessionInfoCard({
   createdAt,
   scheduledAt,
   status,
+  sessionCode,
+  sessionId,
 }: SessionInfoCardProps) {
+  const navigate = useNavigate();
   const onJoin = () => {
-    if (status === "Created") {
-    }
+    navigate(`/join/host?sessionCode=${sessionCode}`, {
+      state: { sessionId: sessionId },
+    });
   };
 
   return (
@@ -33,7 +42,12 @@ function SessionInfoCard({
         <div className="flex flex-col flex-1 justify-between w-full">
           <div className="flex items-center justify-between mt-2 mb-3 w-full">
             <div className="flex gap-2">
-              <IoVideocamOutline color="var(--muted-foreground)" />
+              {status === "Scheduled" ? (
+                <MdOutlineDateRange color="var(--muted-foreground)" />
+              ) : (
+                <IoVideocamOutline color="var(--muted-foreground)" />
+              )}
+
               <p className="text-muted-foreground text-[10px]">
                 {scheduledAt
                   ? Utils.renderDateTime(scheduledAt.toString())
@@ -44,11 +58,17 @@ function SessionInfoCard({
               {status}
             </p>
           </div>
-
-          <Button className="w-full">
-            <Plus />
-            Join
-          </Button>
+          {status === "CREATED" ? (
+            <Button className="w-full" onClick={onJoin}>
+              <Plus />
+              Join
+            </Button>
+          ) : (
+            <Button className="w-full">
+              <Plus />
+              View
+            </Button>
+          )}
         </div>
       </div>
     </>

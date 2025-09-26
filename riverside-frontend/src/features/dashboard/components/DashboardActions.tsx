@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 function DashboardActions() {
   const navigator = useNavigate();
   const onRecordingClick = () => {
-    navigator("/createSession");
+    navigator("/create-session");
   };
   return (
     <>

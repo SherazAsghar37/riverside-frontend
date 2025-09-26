@@ -25,6 +25,8 @@ function Sessions() {
             sessions.map((session) => (
               <SessionInfoCard
                 key={session.id}
+                sessionId={session.id}
+                sessionCode={session.sessionCode}
                 createdAt={session.createdAt}
                 scheduledAt={session.scheduledAt}
                 status={session.status}

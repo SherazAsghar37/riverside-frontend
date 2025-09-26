@@ -33,3 +33,17 @@ export async function joinSessionApi(sessionCode: string) {
   const response = await api.post(`sessions/join-session/${sessionCode}`);
   return response;
 }
+
+export async function joinAsHostApi({ sessionCode }: { sessionCode: string }) {
+  const response = await api.post(`sessions/join-as-host/${sessionCode}`);
+  return response;
+}
+
+export async function sessionInformationApi({
+  sessionCode,
+}: {
+  sessionCode: string;
+}) {
+  const response = await api.get(`sessions/information/${sessionCode}`);
+  return response;
+}

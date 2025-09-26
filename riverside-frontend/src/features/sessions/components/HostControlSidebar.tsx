@@ -36,8 +36,10 @@ import { TiUserAdd } from "react-icons/ti";
 
 export default function HostControlSidebar({
   children,
+  onInviteClick,
 }: {
   children: React.ReactNode;
+  onInviteClick: () => void;
 }) {
   const location = useLocation();
   const dispatch = useDispatch();
@@ -77,7 +79,10 @@ export default function HostControlSidebar({
             </h1>
           </div>
           <div className="flex gap-2 items-center">
-            <Button className="h-9 bg-card hover:bg-light-card">
+            <Button
+              className="h-9 bg-card hover:bg-light-card"
+              onClick={onInviteClick}
+            >
               <TiUserAdd className="!w-5 !h-7" />
               <span className="spl-5">Invite</span>
             </Button>

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 
 import { createSessionApi } from "../sessionApi";
@@ -6,11 +6,32 @@ import CreateSessionHeader from "../components/CreateSessionHeader";
 import CreateSessionInformation from "../components/CreateSessionInformation";
 
 import CreateSessionCamView from "../components/CreateSessionCamView";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/app/store";
+import { fetchSessionInformation } from "../sessionSlice";
 
-const token = localStorage.getItem("JWT");
-console.log("i am session", token);
-export default function CreateSession() {
+export default function PreSessionConfiguration() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dispatch = useDispatch();
+
   const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const { user } = useSelector((state: RootState) => state.auth);
+
+  const isJoiningAsHost = location.pathname.includes("host");
+  const isCreatingSession = location.pathname.includes("create-session");
+  const isJoiningAaParticipant = !isJoiningAsHost && !isCreatingSession;
+
+  const sessionCode = searchParams.get("session-code");
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    } else {
+      onAllowAccess();
+    }
+  }, []);
 
   const onAllowAccess = useCallback(() => {
     navigator.mediaDevices
@@ -24,7 +45,15 @@ export default function CreateSession() {
       });
   }, []);
 
-  useEffect(onAllowAccess, []);
+  useEffect(() => {
+    if (!isCreatingSession && !isJoiningAsHost) {
+      if (!sessionCode) {
+        navigate("/");
+      } else {
+        dispatch(fetchSessionInformation({ sessionCode: sessionCode }) as any);
+      }
+    }
+  }, [sessionCode]);
 
   const camBlocked = !stream;
   const micBlocked = !stream || !stream.getAudioTracks().length;
@@ -33,7 +62,9 @@ export default function CreateSession() {
     <>
       <div className="bg-[var(--secondary-background)] min-h-screen flex flex-col">
         <div>
-          <CreateSessionHeader />
+          <CreateSessionHeader
+            isJoiningAsParticipant={isJoiningAaParticipant}
+          />
         </div>
 
         <div className="flex flex-1 flex-col [@media(min-width:850px)]:flex-row justify-center items-center gap-20 px-20 py-10">

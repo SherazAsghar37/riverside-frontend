@@ -5,12 +5,20 @@ import { ArrowLeftIcon } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
-function CreateSessionHeader() {
+function CreateSessionHeader({
+  isJoiningAsParticipant,
+}: {
+  isJoiningAsParticipant: boolean;
+}) {
   const navigate = useNavigate();
   const onBack = () => {
     navigate(-1);
   };
   const { user } = useSelector((state: RootState) => state.auth);
+  const { sessionInformation } = useSelector(
+    (state: RootState) => state.session
+  );
+
   return (
     <>
       <div className="flex items-center gap-2 px-4 py-2 ">
@@ -25,7 +33,10 @@ function CreateSessionHeader() {
           aria-hidden="true"
         />
         <h1 className="text-[14px]  font-[500] text-foreground">
-          {Utils.capitalize(user?.name ?? "")}'s studio
+          {isJoiningAsParticipant
+            ? Utils.capitalize(sessionInformation?.hostName ?? "")
+            : Utils.capitalize(user?.name ?? "")}
+          's studio
         </h1>
       </div>
     </>

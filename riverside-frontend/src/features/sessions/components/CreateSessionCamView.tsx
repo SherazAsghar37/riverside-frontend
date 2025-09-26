@@ -1,11 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BiMicrophone, BiMicrophoneOff } from "react-icons/bi";
+import { TbVideo, TbVideoOff } from "react-icons/tb";
+
 import {
   HiOutlineVideoCameraSlash,
   HiOutlineVideoCamera,
 } from "react-icons/hi2";
 import { TbMicrophoneOff, TbMicrophoneFilled } from "react-icons/tb";
 import { HiOutlineSpeakerWave, HiOutlineSpeakerXMark } from "react-icons/hi2";
+import { useDispatch, useSelector } from "react-redux";
+import { Root } from "react-dom/client";
+import { RootState } from "@/app/store";
+import { setCameraOffState, setMuteState } from "../sessionSlice";
 
 interface CreateSessionCamViewProps {
   stream: MediaStream | null;
@@ -20,6 +27,9 @@ function CreateSessionCamView({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoDevice, setVideoDevice] = useState<string | null>(null);
   const [audioDevice, setAudioDevice] = useState<string | null>(null);
+
+  const { controlState } = useSelector((state: RootState) => state.session);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (stream && videoRef.current) {
@@ -39,6 +49,49 @@ function CreateSessionCamView({
     }
   }, [stream]);
 
+  const onMicStateChange = () => {
+    if (controlState.isMuted) {
+      unmuteMic();
+    } else {
+      muteMic();
+    }
+  };
+
+  const muteMic = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach((track) => (track.enabled = false));
+      dispatch(setMuteState(true));
+    }
+  };
+
+  const unmuteMic = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach((track) => (track.enabled = true));
+      dispatch(setMuteState(false));
+    }
+  };
+  const onCameraStateChange = () => {
+    if (controlState.isCameraOff) {
+      enabledCamera();
+    } else {
+      disableCamera();
+    }
+  };
+
+  const enabledCamera = () => {
+    if (stream) {
+      stream.getVideoTracks().forEach((track) => (track.enabled = true));
+      dispatch(setCameraOffState(false));
+    }
+  };
+
+  const disableCamera = () => {
+    if (stream) {
+      stream.getVideoTracks().forEach((track) => (track.enabled = false));
+      dispatch(setCameraOffState(true));
+    }
+  };
+
   const camBlocked = !stream;
   const micBlocked = !stream || !stream.getAudioTracks().length;
 
@@ -57,14 +110,38 @@ function CreateSessionCamView({
           </>
         ) : (
           <>
-            <video
-              ref={videoRef}
-              width={320}
-              height={180}
-              autoPlay
-              muted
-              className="rounded-lg bg-black"
-            />
+            <div className="relative w-[320px] h-[180px] flex items-center justify-center gap-2">
+              <video
+                ref={videoRef}
+                width={320}
+                height={180}
+                autoPlay
+                muted
+                className="rounded-lg bg-black"
+              />
+              <div className="absolute bottom-1 ">
+                <Button
+                  className="bg-light-card rounded-lg hover:bg-card mr-1"
+                  onClick={onMicStateChange}
+                >
+                  {!controlState.isMuted ? (
+                    <BiMicrophone className="!w-5 !h-7 " />
+                  ) : (
+                    <BiMicrophoneOff color="red" className="!w-5 !h-7" />
+                  )}
+                </Button>
+                <Button
+                  className="bg-light-card rounded-lg hover:bg-card ml-1"
+                  onClick={onCameraStateChange}
+                >
+                  {!controlState.isCameraOff ? (
+                    <TbVideo className="!w-5 !h-7 " />
+                  ) : (
+                    <TbVideoOff color="red" className="!w-5 !h-7" />
+                  )}
+                </Button>
+              </div>
+            </div>
           </>
         )}
       </div>

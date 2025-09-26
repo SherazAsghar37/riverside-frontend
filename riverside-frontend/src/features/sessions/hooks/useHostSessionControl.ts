@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
 import {
@@ -15,22 +15,37 @@ import { useMediasoup } from "./useMediasoup";
 const useHostSessionControl = () => {
   const dispatch = useAppDispatch();
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
 
   const [params, setParams] = useState({
     encoding: [
-      { rid: "r0", maxBitrate: 100000, scalabilityMode: "S1T3" }, // Lowest quality layer
-      { rid: "r1", maxBitrate: 300000, scalabilityMode: "S1T3" }, // Middle quality layer
-      { rid: "r2", maxBitrate: 900000, scalabilityMode: "S1T3" }, // Highest quality layer
+      { rid: "r0", maxBitrate: 100000, scalabilityMode: "S1T3" },
+      { rid: "r1", maxBitrate: 300000, scalabilityMode: "S1T3" },
+      { rid: "r2", maxBitrate: 900000, scalabilityMode: "S1T3" },
     ],
     codecOptions: { videoGoogleStartBitrate: 1000 },
   });
 
-  const { recordingState, sessionInformation, disableCallButton } = useSelector(
-    (state: RootState) => state.session
-  );
+  const {
+    recordingState,
+    sessionInformation,
+    disableCallButton,
+    controlState,
+    isConnected,
+  } = useSelector((state: RootState) => state.session);
+
   const isRecording = recordingState.isRecording;
+
+  useEffect(() => {
+    onCameraToggle();
+  }, [controlState.isCameraOff]);
+
+  useEffect(() => {
+    onAudioToggle();
+  }, [controlState.isMuted]);
+
+  const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
 
   const {
     onRTPCapabilitiesReceived,
@@ -40,11 +55,13 @@ const useHostSessionControl = () => {
     onReceiveTransportCreated,
     onConsumerCreated,
     onNewProducerJoined,
-    initializeStreamInsideMediasoup,
-    streams,
+    produceAudio,
+    produceCamera,
+    stopProducingScreen,
+    stopProducingCamera,
   } = useMediasoup();
 
-  const { socket, getRtpCapabilities } = useWebSocketHandler({
+  const { socket, connectSocket } = useWebSocketHandler({
     sessionId: sessionInformation?.sessionId,
     token: localStorage.getItem("JWT") ?? "",
 
@@ -57,31 +74,84 @@ const useHostSessionControl = () => {
     onNewProducerJoined,
   });
 
-  const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
+  const setupSession = () => {
+    //1. First get the RTP Capabilities from the server
+    //2. Create a mediasoup Device
+    //3. Create a send transport
+    //4. create a consumer transport
+    startProducingAudio();
+    if (!controlState.isCameraOff) {
+      startProducingCamera();
+    }
+  };
 
-  const startCall = async () => {
+  const InitStream = async () => {
     try {
-      if (!stream) {
-        dispatch(setDisableCallButton(true));
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        let localParams = undefined;
-        if (videoRef.current) {
-          const track = stream.getVideoTracks()[0];
-          videoRef.current.srcObject = stream;
-          localParams = { ...params, track };
-          setParams((prev) => ({ ...prev, track }));
-        }
-        setStream(stream);
-        initializeStreamInsideMediasoup(stream!, localParams!);
-        initializeMediaRecorder(stream!);
-        getRtpCapabilities();
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
 
+      if (controlState.isCameraOff) {
+        stream.getVideoTracks().forEach((track) => (track.enabled = false));
+      }
+      if (controlState.isMuted) {
+        stream.getAudioTracks().forEach((track) => (track.enabled = false));
+      }
+      streamRef.current = stream;
       return stream;
     } catch (error) {
-      console.error("Error accessing camera:", error);
+      console.error("Error accessing media devices:", error);
+    }
+  };
+
+  const startProducingAudio = async () => {
+    try {
+      const stream = await InitStream();
+      const track = stream.getAudioTracks()[0];
+      const localParams = { ...params, track };
+      produceAudio(stream, localParams);
+    } catch (error) {
+      console.error("Error in producing audio:", error);
+    }
+  };
+
+  const onAudioToggle = () => {
+    if (!controlState.isMuted) {
+      streamRef.current
+        ?.getAudioTracks()
+        .forEach((track) => (track.enabled = false));
+    } else {
+      streamRef.current
+        ?.getAudioTracks()
+        .forEach((track) => (track.enabled = true));
+    }
+  };
+
+  const onCameraToggle = () => {
+    if (!controlState.isCameraOff) {
+      streamRef.current
+        ?.getVideoTracks()
+        .forEach((track) => (track.enabled = true));
+      const track = streamRef.current?.getVideoTracks()[0];
+      const localParams = { ...params, track };
+
+      produceCamera(streamRef.current!, localParams);
+    } else {
+      streamRef.current
+        ?.getVideoTracks()
+        .forEach((track) => (track.enabled = false));
+    }
+  };
+
+  const startProducingCamera = async () => {
+    try {
+      const stream = await InitStream();
+      const track = stream.getVideoTracks()[0];
+      const localParams = { ...params, track };
+      produceCamera(stream, localParams);
+    } catch (error) {
+      console.error("Error in producing camera:", error);
     }
   };
 
@@ -105,6 +175,7 @@ const useHostSessionControl = () => {
   };
 
   const startRecording = () => {
+    //  initializeMediaRecorder(stream!);
     if (mediaRecorder) {
       socket?.send(
         JSON.stringify({
@@ -137,14 +208,14 @@ const useHostSessionControl = () => {
   };
 
   return {
-    videoRef,
     socket,
-    mediaRecorder,
-    startCall,
+    streamRef,
+    connectSocket,
+    setupSession,
+    startProducingCamera,
     startRecording,
     stopRecording,
     formatDuration,
-    useWebSocketHandler,
   };
 };
 
