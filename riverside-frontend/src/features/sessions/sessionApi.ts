@@ -29,14 +29,14 @@ export async function sendFinalCallToEndOfRecordingApi({
   return response;
 }
 
-export async function joinSessionApi(sessionCode: string) {
+export async function joinSessionApi({ sessionCode }: { sessionCode: string }) {
   const response = await api.post(`sessions/join-session/${sessionCode}`);
-  return response;
+  return response.data;
 }
 
 export async function joinAsHostApi({ sessionCode }: { sessionCode: string }) {
   const response = await api.post(`sessions/join-as-host/${sessionCode}`);
-  return response;
+  return response.data;
 }
 
 export async function sessionInformationApi({

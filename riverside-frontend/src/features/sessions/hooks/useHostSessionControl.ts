@@ -18,13 +18,28 @@ const useHostSessionControl = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
 
-  const [params, setParams] = useState({
-    encoding: [
+  const [streamState, setStreamState] = useState<{
+    stream: MediaStream | null;
+  }>({ stream: null });
+
+  const [videoParams, setVideoParams] = useState({
+    encodings: [
       { rid: "r0", maxBitrate: 100000, scalabilityMode: "S1T3" },
       { rid: "r1", maxBitrate: 300000, scalabilityMode: "S1T3" },
       { rid: "r2", maxBitrate: 900000, scalabilityMode: "S1T3" },
     ],
     codecOptions: { videoGoogleStartBitrate: 1000 },
+  });
+
+  const [audioParams, setAudioParams] = useState({
+    encodings: [
+      { maxBitrate: 64000 }, // Single encoding for audio
+    ],
+    codecOptions: {
+      opusStereo: true,
+      opusDtx: true, // Discontinuous transmission
+      opusFec: true, // Forward error correction
+    },
   });
 
   const {
@@ -33,6 +48,7 @@ const useHostSessionControl = () => {
     disableCallButton,
     controlState,
     isConnected,
+    mediasoup,
   } = useSelector((state: RootState) => state.session);
 
   const isRecording = recordingState.isRecording;
@@ -44,6 +60,11 @@ const useHostSessionControl = () => {
   useEffect(() => {
     onAudioToggle();
   }, [controlState.isMuted]);
+
+  useEffect(() => {
+    InitStream();
+    console.log("stream has initialized", streamRef.current);
+  }, []);
 
   const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
 
@@ -59,6 +80,7 @@ const useHostSessionControl = () => {
     produceCamera,
     stopProducingScreen,
     stopProducingCamera,
+    onDisconnected,
   } = useMediasoup();
 
   const { socket, connectSocket } = useWebSocketHandler({
@@ -72,6 +94,7 @@ const useHostSessionControl = () => {
     onReceiveTransportCreated,
     onConsumerCreated,
     onNewProducerJoined,
+    onDisconnected,
   });
 
   const setupSession = () => {
@@ -98,7 +121,9 @@ const useHostSessionControl = () => {
       if (controlState.isMuted) {
         stream.getAudioTracks().forEach((track) => (track.enabled = false));
       }
+
       streamRef.current = stream;
+      setStreamState({ stream: stream });
       return stream;
     } catch (error) {
       console.error("Error accessing media devices:", error);
@@ -107,9 +132,10 @@ const useHostSessionControl = () => {
 
   const startProducingAudio = async () => {
     try {
+      console.log("here in start producing audio");
       const stream = await InitStream();
       const track = stream.getAudioTracks()[0];
-      const localParams = { ...params, track };
+      const localParams = { ...audioParams, track };
       produceAudio(stream, localParams);
     } catch (error) {
       console.error("Error in producing audio:", error);
@@ -129,14 +155,9 @@ const useHostSessionControl = () => {
   };
 
   const onCameraToggle = () => {
-    if (!controlState.isCameraOff) {
-      streamRef.current
-        ?.getVideoTracks()
-        .forEach((track) => (track.enabled = true));
-      const track = streamRef.current?.getVideoTracks()[0];
-      const localParams = { ...params, track };
-
-      produceCamera(streamRef.current!, localParams);
+    if (!controlState.isCameraOff && mediasoup.setupDone) {
+      console.log("here in a camera toggle");
+      startProducingCamera();
     } else {
       streamRef.current
         ?.getVideoTracks()
@@ -146,9 +167,10 @@ const useHostSessionControl = () => {
 
   const startProducingCamera = async () => {
     try {
+      console.log("here in start producing camera");
       const stream = await InitStream();
       const track = stream.getVideoTracks()[0];
-      const localParams = { ...params, track };
+      const localParams = { ...videoParams, track };
       produceCamera(stream, localParams);
     } catch (error) {
       console.error("Error in producing camera:", error);
@@ -209,7 +231,7 @@ const useHostSessionControl = () => {
 
   return {
     socket,
-    streamRef,
+    streamState,
     connectSocket,
     setupSession,
     startProducingCamera,

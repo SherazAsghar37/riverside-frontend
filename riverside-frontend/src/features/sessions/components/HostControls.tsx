@@ -22,19 +22,19 @@ function CallControls({ stream, isHost }: CallControlsProps) {
   const { controlState } = useSelector((state: RootState) => state.session);
   const dispatch = useDispatch();
 
-  React.useEffect(() => {
-    if (stream) {
-      const audioEnabled = stream
-        .getAudioTracks()
-        .some((track) => track.enabled);
-      const videoEnabled = stream
-        .getVideoTracks()
-        .some((track) => track.enabled);
+  // React.useEffect(() => {
+  //   if (stream) {
+  //     const audioEnabled = stream
+  //       .getAudioTracks()
+  //       .some((track) => track.enabled);
+  //     const videoEnabled = stream
+  //       .getVideoTracks()
+  //       .some((track) => track.enabled);
 
-      dispatch(setMuteState(!audioEnabled));
-      dispatch(setCameraOffState(!videoEnabled));
-    }
-  }, [stream]);
+  //     // dispatch(setMuteState(!audioEnabled));
+  //     // dispatch(setCameraOffState(!videoEnabled));
+  //   }
+  // }, [stream]);
 
   const onMicStateChange = () => {
     if (controlState.isMuted) {

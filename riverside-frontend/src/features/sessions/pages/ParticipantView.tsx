@@ -3,7 +3,11 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { RootState } from "../../../app/store";
 import { useDispatch, useSelector } from "react-redux";
-import { joinSessionAsHost, setSessionInformation } from "../sessionSlice";
+import {
+  joinSessionAsHost,
+  joinSessionAsParticipant,
+  setSessionInformation,
+} from "../sessionSlice";
 import useHostSessionControl from "../hooks/useHostSessionControl";
 import HostControlSidebar from "../components/HostControlSidebar";
 import HostControls from "../components/HostControls";
@@ -20,31 +24,42 @@ export default function ParticipantView() {
 
   const dispatch = useDispatch();
 
-  const { isConnected, connectionStatus, error, sessionInformation } =
-    useSelector((state: RootState) => state.session);
+  const {
+    isConnected,
+    connectionStatus,
+    error,
+    sessionInformation,
+    mediasoup,
+  } = useSelector((state: RootState) => state.session);
 
   //to validate if session exists or not yet started
   useEffect(() => {
     console.log("Session Code:", sessionCode);
     console.log("Session ID:", sessionId);
-    if (!sessionCode || !sessionId) {
+    if (!sessionCode) {
       navigate("/");
       return;
     }
-    dispatch(joinSessionAsHost({ sessionCode: sessionCode }) as any);
+    dispatch(joinSessionAsParticipant({ sessionCode: sessionCode }) as any);
   }, [sessionId, sessionCode, navigate]);
 
   useEffect(() => {
-    if (sessionInformation && !isConnected) {
-      connectSocket();
-    } else {
+    if (sessionInformation && mediasoup.setupDone) {
       setupSession();
+      console.log("herree");
     }
-  }, [sessionInformation, isConnected]);
+  }, [mediasoup]);
+
+  useEffect(() => {
+    console.log("isConnected changed: ", sessionInformation);
+    if (!isConnected && sessionInformation?.sessionId != null) {
+      connectSocket();
+    }
+  }, [isConnected, sessionInformation]);
 
   const {
     socket,
-    streamRef,
+    streamState,
     connectSocket,
     setupSession,
     startRecording,
@@ -61,8 +76,8 @@ export default function ParticipantView() {
         children={
           <div className="bg-background min-h-screen flex flex-col">
             <div className="flex flex-col flex-1 my-5">
-              <HostCallPreview stream={streamRef.current} />
-              <HostControls stream={streamRef.current} isHost={false} />
+              <HostCallPreview stream={streamState.stream} />
+              <HostControls stream={streamState.stream} isHost={false} />
             </div>
           </div>
         }

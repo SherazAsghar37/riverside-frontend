@@ -4,12 +4,17 @@ import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 import store from "@/app/store";
+import { enableMapSet } from "immer";
+import ConsumerProvider from "./features/sessions/contexts/ConsumerContext";
+
+enableMapSet();
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
     <Provider store={store}>
-      <App />
+      <ConsumerProvider>
+        <App />
+      </ConsumerProvider>
     </Provider>
-    ,
   </BrowserRouter>
 );

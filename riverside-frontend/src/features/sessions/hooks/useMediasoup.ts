@@ -2,16 +2,14 @@ import ConsumerManager from "@/services/ConsumerManager";
 import { Device } from "mediasoup-client";
 import { type Consumer } from "mediasoup-client/types";
 import { useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
+import { setMediasoupSetupDone } from "../sessionSlice";
+import useConsumerManager from "@/services/ConsumerManager";
+import { useConsumerContext } from "../contexts/ConsumerContext";
 
 type Params = {
-  encoding: {
-    rid: string;
-    maxBitrate: number;
-    scalabilityMode: string;
-  }[];
-  codecOptions: {
-    videoGoogleStartBitrate: number;
-  };
+  encodings: any;
+  codecOptions: any;
   track?: MediaStreamTrack;
 };
 
@@ -36,7 +34,8 @@ type ConsumerInformation = {
 };
 
 const useMediasoup = () => {
-  const consumerManagerRef = useRef<ConsumerManager>(new ConsumerManager());
+  const { cleanup, addConsumer, removeConsumer, removeParticipant } =
+    useConsumerContext();
 
   const audioProducerRef = useRef<any | null>(null);
   const cameraProducerRef = useRef<any | null>(null);
@@ -50,13 +49,15 @@ const useMediasoup = () => {
 
   const rtpCapabilitiesRef = useRef<any>(null);
 
+  const dispatch = useDispatch();
+
   let pendingProduceCallback: ((arg0: { id: any }) => void) | null = null;
 
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     return () => {
-      consumerManagerRef.current.cleanup();
+      cleanup();
       audioProducerRef.current = null;
       cameraProducerRef.current = null;
       screenProducerRef.current = null;
@@ -131,7 +132,7 @@ const useMediasoup = () => {
     transport?.on(
       "produce",
       async (
-        { kind, rtpParameters }: any,
+        { kind, rtpParameters, appData }: any,
         callback: any,
         errorCallback: any
       ) => {
@@ -139,10 +140,11 @@ const useMediasoup = () => {
           console.log("Producing with RTP parameters:", rtpParameters);
           ws?.send(
             JSON.stringify({
-              type: "transportProducer",
+              type: "createProducer",
               transportId: transport.id,
-              kind: JSON.stringify(kind),
+              kind: kind,
               rtpParameters: JSON.stringify(rtpParameters),
+              appData: JSON.stringify(appData),
             })
           );
           // Store the callback to be called when server responds with the producer ID
@@ -188,17 +190,27 @@ const useMediasoup = () => {
         }
       }
     );
+    dispatch(setMediasoupSetupDone(true));
   };
 
-  const produceStream = async (stream: MediaStream, params: Params) => {
-    console.log("Params in connectSendTransport: ", params);
-    console.log("Connecting Send Transport...");
-    console.log("Stream in connectSendTransport: ", stream);
+  const produceStream = async (
+    stream: MediaStream,
+    params: Params,
+    source: string,
+    sourceId: string
+  ) => {
+    console.log("Stream in produce Stream: ", stream);
 
     const localProducer = await producerTransportRef.current?.produce({
       track: params?.track,
-      encodings: params?.encoding,
+      encodings: params?.encodings,
       codecOptions: params?.codecOptions,
+      appData: {
+        source: source,
+        streamId: stream.id,
+        sourceId: sourceId,
+        timeStamp: Date.now(),
+      },
     });
 
     localProducer?.on("trackended", () => {
@@ -217,7 +229,12 @@ const useMediasoup = () => {
       return audioProducerRef.current;
     }
 
-    const localProducer = await produceStream(stream, params);
+    const localProducer = await produceStream(
+      stream,
+      params,
+      "camera",
+      "camera_audio"
+    );
     audioProducerRef.current = localProducer;
     return localProducer;
   };
@@ -228,7 +245,12 @@ const useMediasoup = () => {
       return cameraProducerRef.current;
     }
 
-    const localProducer = await produceStream(stream, params);
+    const localProducer = await produceStream(
+      stream,
+      params,
+      "camera",
+      "camera_video"
+    );
     cameraProducerRef.current = localProducer;
     return localProducer;
   };
@@ -239,7 +261,12 @@ const useMediasoup = () => {
       return screenProducerRef.current;
     }
 
-    const localProducer = await produceStream(stream, params);
+    const localProducer = await produceStream(
+      stream,
+      params,
+      "screen",
+      "screen_video"
+    );
     screenProducerRef.current = localProducer;
     return localProducer;
   };
@@ -250,7 +277,12 @@ const useMediasoup = () => {
       return screenAudioProducerRef.current;
     }
 
-    const localProducer = await produceStream(stream, params);
+    const localProducer = await produceStream(
+      stream,
+      params,
+      "screen",
+      "screen_audio"
+    );
     screenAudioProducerRef.current = localProducer;
     return localProducer;
   };
@@ -292,72 +324,52 @@ const useMediasoup = () => {
   };
 
   const onNewProducerJoined = async (ws: WebSocket, msg: any) => {
-    console.log("Server producerId", msg.data.id);
-    console.log("My producerId", msg.data.producerId);
-    console.log("Producer userId", msg.data.userId);
-
-    //send a request to server to create a consumer
+    console.log("New producer Joined", msg);
     ws.send(
       JSON.stringify({
-        type: "transportConsumer",
+        type: "createConsumer",
         transportId: consumerTransportRef.current?.id,
         producerId: msg.data.id,
         kind: msg.data.kind,
+        participantId: msg.data.userId,
+        appData: msg.data.appData,
         rtpCapabilities: JSON.stringify(rtpCapabilitiesRef.current),
       })
     );
-
-    console.log("New producer joined with ID:", {
-      type: "transportConsumer",
-      transportId: consumerTransportRef.current?.id,
-      producerId: msg.data.id,
-      kind: msg.data.kind,
-      rtpCapabilities: JSON.stringify(rtpCapabilitiesRef.current),
-    });
   };
 
   const startConsumingProducer = async (ws: WebSocket, producer: any) => {
     const msg = JSON.parse(producer);
-    console.log("Server producerId", msg.producer.id);
-    console.log("My producerId", msg.data.producerId);
-    console.log("Producer userId", msg.producer.userId);
-
-    //send a request to server to create a consumer
+    console.log("Start Consuming Producer on join", msg);
     ws.send(
       JSON.stringify({
-        type: "transportConsumer",
+        type: "createConsumer",
         transportId: consumerTransportRef.current?.id,
-        producerId: msg.producer.id,
-        kind: msg.producer.kind,
+        producerId: msg.id,
+        kind: msg.kind,
+        appData: msg.appData,
+        participantId: msg.userId,
         rtpCapabilities: JSON.stringify(rtpCapabilitiesRef.current),
       })
     );
-
-    console.log("New producer joined with ID:", {
-      type: "transportConsumer",
-      transportId: consumerTransportRef.current?.id,
-      producerId: msg.data.id,
-      kind: msg.data.kind,
-      rtpCapabilities: JSON.stringify(rtpCapabilitiesRef.current),
-    });
   };
 
   const onConsumerCreated = async (ws: WebSocket, msg: any) => {
     try {
+      console.log("msg in onConsumerCreated", msg);
       const params = msg.data;
-      const kind = JSON.parse(params.kind);
+      const kind = params.kind;
       const rtpParameters = JSON.parse(params.rtpParameters);
 
       // Extract from server message - adjust based on your server implementation
-      const participantId =
-        params.participantId || params.appData?.participantId;
-      const sourceType =
-        params.sourceType || params.appData?.sourceType || "camera";
+      const participantId = msg.participantId;
 
       if (!participantId) {
         console.error("No participantId provided in consumer message");
         return;
       }
+
+      console.log();
 
       // Create consumer
       let consumer = await consumerTransportRef.current?.consume({
@@ -373,7 +385,7 @@ const useMediasoup = () => {
       }
 
       // Add to consumer manager
-      consumerManagerRef.current.addConsumer(participantId, consumer, {
+      addConsumer(participantId, consumer, params.appData, {
         id: params.id,
         producerId: params.producerId,
         kind: kind,
@@ -388,19 +400,21 @@ const useMediasoup = () => {
       // Handle track end
       const { track } = consumer;
       track.onended = () => {
-        consumerManagerRef.current.removeConsumer(
-          participantId,
-          consumer.id,
-          sourceType,
-          kind
-        );
+        removeConsumer(participantId, consumer.id, kind);
       };
 
       console.log(
-        `Consumer created and managed for ${participantId} (${sourceType} ${kind})`
+        `Consumer created and managed for ${participantId}  ${kind})`
       );
     } catch (error) {
       console.error("Error in onConsumerCreated:", error);
+    }
+  };
+
+  const onDisconnected = (msg: any) => {
+    console.log("User disconnected:", msg);
+    if (msg.participantId) {
+      removeParticipant(msg.participantId);
     }
   };
 
@@ -418,11 +432,11 @@ const useMediasoup = () => {
     produceScreenAudio,
     stopProducingCamera,
     stopProducingScreen,
+    onDisconnected,
     audioProducerRef,
     cameraProducerRef,
     screenProducerRef,
     screenAudioProducerRef,
-    consumerManagerRef,
   };
 };
 

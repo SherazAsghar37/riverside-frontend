@@ -3,17 +3,25 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import { joinAsHostApi, sessionInformationApi } from "./sessionApi";
+import {
+  joinAsHostApi,
+  joinSessionApi,
+  sessionInformationApi,
+} from "./sessionApi";
 
 interface SessionState {
   sessionInformation: SessionInformation | null;
   recordingState: RecordingState;
   controlState: ControlState;
   disableCallButton: boolean;
-
+  mediasoup: MediasoupState;
   isConnected: boolean;
   connectionStatus: "Idle" | "Connected" | "Disconnected" | "Connection Error";
   error: string | null;
+}
+
+interface MediasoupState {
+  setupDone: boolean;
 }
 
 interface ControlState {
@@ -43,6 +51,9 @@ const initialState: SessionState = {
   sessionInformation: null,
   disableCallButton: false,
   isConnected: false,
+  mediasoup: {
+    setupDone: false,
+  },
   connectionStatus: "Idle",
   controlState: {
     isMuted: false,
@@ -74,6 +85,18 @@ const joinSessionAsHost = createAsyncThunk(
   }
 );
 
+const joinSessionAsParticipant = createAsyncThunk(
+  "session/joinAsParticipant",
+  async (sessionCode: { sessionCode: string }, { rejectWithValue }) => {
+    try {
+      const response = await joinSessionApi(sessionCode);
+      return response;
+    } catch (err: any) {
+      return rejectWithValue(err.message || "Something went wrong");
+    }
+  }
+);
+
 const fetchSessionInformation = createAsyncThunk(
   "session/fetchSessionInformation",
   async (sessionCode: { sessionCode: string }, { rejectWithValue }) => {
@@ -91,6 +114,16 @@ const sessionSlice = createSlice({
   name: "session",
   initialState,
   reducers: {
+    initializeSessionState(state) {
+      state.sessionInformation = null;
+      state.recordingState = initialState.recordingState;
+      state.controlState = initialState.controlState;
+      state.disableCallButton = false;
+      state.isConnected = false;
+      state.connectionStatus = "Idle";
+      state.error = null;
+      state.mediasoup = initialState.mediasoup;
+    },
     setSessionInformation(state, action: PayloadAction<SessionInformation>) {
       state.sessionInformation = action.payload;
     },
@@ -149,14 +182,26 @@ const sessionSlice = createSlice({
     setDeafenedState(state, action: PayloadAction<boolean>) {
       state.controlState.isDeafened = action.payload;
     },
+    setMediasoupSetupDone(state, action: PayloadAction<boolean>) {
+      state.mediasoup.setupDone = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(joinSessionAsHost.fulfilled, (state, action) => {
       console.log("Join session as host fulfilled:", action.payload);
-      state.sessionInformation = action.payload.data;
+      state.sessionInformation = action.payload;
       state.error = null;
     });
     builder.addCase(joinSessionAsHost.rejected, (state, action) => {
+      state.sessionInformation = null;
+      state.error = action.payload as string;
+    });
+    builder.addCase(joinSessionAsParticipant.fulfilled, (state, action) => {
+      console.log("Join session as participant fulfilled:", action.payload);
+      state.sessionInformation = action.payload;
+      state.error = null;
+    });
+    builder.addCase(joinSessionAsParticipant.rejected, (state, action) => {
       state.sessionInformation = null;
       state.error = action.payload as string;
     });
@@ -188,7 +233,9 @@ export const {
   setCameraOffState,
   setScreenShareState,
   setDeafenedState,
+  setMediasoupSetupDone,
+  initializeSessionState,
 } = sessionSlice.actions;
 
 export default sessionSlice.reducer;
-export { joinSessionAsHost, fetchSessionInformation };
+export { joinSessionAsHost, fetchSessionInformation, joinSessionAsParticipant };

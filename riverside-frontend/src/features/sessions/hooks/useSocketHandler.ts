@@ -14,6 +14,7 @@ interface UseWebSocketHandlerOptions {
   onReceiveTransportCreated?: (msg: any, ws: WebSocket) => Promise<void>;
   onConsumerCreated?: (ws: WebSocket, msg: any) => Promise<void>;
   onNewProducerJoined: (ws: WebSocket, msg: any) => void;
+  onDisconnected: (msg: any) => void;
 }
 
 export const useWebSocketHandler = ({
@@ -27,6 +28,7 @@ export const useWebSocketHandler = ({
   onReceiveTransportCreated,
   onConsumerCreated,
   onNewProducerJoined,
+  onDisconnected,
 }: UseWebSocketHandlerOptions) => {
   const dispatch = useDispatch();
 
@@ -37,9 +39,10 @@ export const useWebSocketHandler = ({
     socketRef.current = ws;
 
     ws.onopen = () => {
-      console.log("WebSocket connected");
+      console.log("WebSocket connected, SessionId ", sessionId);
       dispatch(setIsConnected(true));
       dispatch(setConnectionStatus("Connected"));
+
       if (sessionId) {
         ws.send(
           JSON.stringify({
@@ -94,6 +97,9 @@ export const useWebSocketHandler = ({
         case "consumerCreated":
           onConsumerCreated?.(ws, msg);
           break;
+        case "userDisconnected":
+          onDisconnected?.(msg);
+          break;
         case "error":
           onSocketError?.(msg);
           break;
@@ -108,10 +114,7 @@ export const useWebSocketHandler = ({
   };
 
   const onUserJoined = () => {
-    setIsConnected(true);
-    setConnectionStatus("Connected");
     getRtpCapabilities();
-
     console.log("WebSocket joined room:", sessionId);
   };
 

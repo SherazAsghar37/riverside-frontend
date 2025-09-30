@@ -8,7 +8,10 @@ import CreateSessionInformation from "../components/CreateSessionInformation";
 import CreateSessionCamView from "../components/CreateSessionCamView";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/app/store";
-import { fetchSessionInformation } from "../sessionSlice";
+import {
+  fetchSessionInformation,
+  initializeSessionState,
+} from "../sessionSlice";
 
 export default function PreSessionConfiguration() {
   const navigate = useNavigate();
@@ -26,6 +29,7 @@ export default function PreSessionConfiguration() {
   const sessionCode = searchParams.get("session-code");
 
   useEffect(() => {
+    dispatch(initializeSessionState() as any);
     if (!user) {
       navigate("/login");
     } else {
