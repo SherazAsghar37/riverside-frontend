@@ -16,6 +16,7 @@ interface UseWebSocketHandlerOptions {
   onNewProducerJoined: (ws: WebSocket, msg: any) => void;
   onProducerPaused: (msg: any) => void;
   onDisconnected: (msg: any) => void;
+  onSessionEnded?: (msg: any) => void;
 }
 
 export const useWebSocketHandler = ({
@@ -31,6 +32,7 @@ export const useWebSocketHandler = ({
   onNewProducerJoined,
   onProducerPaused,
   onDisconnected,
+  onSessionEnded,
 }: UseWebSocketHandlerOptions) => {
   const dispatch = useDispatch();
 
@@ -104,6 +106,10 @@ export const useWebSocketHandler = ({
           break;
         case "userDisconnected":
           onDisconnected?.(msg);
+          break;
+        case "sessionEnded":
+          console.log("Session ended message received");
+          onSessionEnded?.(msg);
           break;
         case "error":
           onSocketError?.(msg);

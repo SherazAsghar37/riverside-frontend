@@ -90,7 +90,11 @@ export default function HostView() {
               />
             </div>
             <div className="flex-shrink-0">
-              <HostControls stream={streamState.stream} isHost={true} />
+              <HostControls
+                stream={streamState.stream}
+                isHost={true}
+                socket={socket}
+              />
             </div>
           </div>
         }

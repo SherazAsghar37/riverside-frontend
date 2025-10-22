@@ -20,7 +20,7 @@ function Sessions() {
     <>
       <div>
         <h5 className="font-semibold text-muted-foreground">Sessions</h5>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-2 mx-2">
+        <div className="flex flex-wrap justify-center gap-4 my-2 mx-2">
           {sessions && sessions.length > 1 ? (
             sessions.map((session) => (
               <SessionInfoCard

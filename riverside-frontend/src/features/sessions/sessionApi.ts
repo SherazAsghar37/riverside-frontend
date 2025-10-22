@@ -1,8 +1,6 @@
 import { api } from "../../api/api";
 
 interface sendFinalCallToEndOfRecordingProps {
-  sessionCode: string;
-  userType: string;
   sessionId: string;
 }
 
@@ -17,15 +15,9 @@ export async function sendChunksToBackendApi(formData: any) {
 }
 
 export async function sendFinalCallToEndOfRecordingApi({
-  sessionCode,
-  userType,
   sessionId,
 }: sendFinalCallToEndOfRecordingProps) {
-  const response = await api.post(`recordings/merge-upload-s3`, {
-    sessionCode,
-    userType,
-    sessionId,
-  });
+  const response = await api.post(`sessions/end-session/${sessionId}`);
   return response;
 }
 

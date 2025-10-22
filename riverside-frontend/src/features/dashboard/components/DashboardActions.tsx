@@ -31,15 +31,15 @@ function DashboardActions() {
             <Video className="mr-2 h-5 w-5" />
             Start Recording
           </Button>
-          <Button variant="outline" size="lg" className="h-10 bg-transparent">
+          <Button variant="primary" size="lg">
             <Calendar className="mr-2 h-5 w-5" />
             Schedule Call
           </Button>
-          <Button variant="outline" size="lg" className="h-10 bg-transparent">
+          <Button variant="primary" size="lg">
             <Users className="mr-2 h-5 w-5" />
             Invite Guests
           </Button>
-          <Button variant="outline" size="lg" className="h-10 bg-transparent">
+          <Button variant="primary" size="lg">
             <Upload className="mr-2 h-5 w-5" />
             Upload recording
           </Button>

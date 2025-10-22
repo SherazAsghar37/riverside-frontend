@@ -115,20 +115,9 @@ const sessionSlice = createSlice({
   initialState,
   reducers: {
     initializeSessionState(state) {
-      state.sessionInformation = {
-        sessionCode: null,
-        sessionId: null,
-        hostId: null,
-        hostName: null,
-      };
-      state.recordingState = initialState.recordingState;
-      state.controlState = initialState.controlState;
-      state.disableCallButton = false;
-      state.isConnected = false;
-      state.connectionStatus = "Idle";
-      state.error = null;
-      state.mediasoup = initialState.mediasoup;
+      resetSlice(state);
     },
+
     setSessionInformation(state, action: PayloadAction<SessionInformation>) {
       state.sessionInformation = action.payload;
     },
@@ -225,6 +214,22 @@ const sessionSlice = createSlice({
     });
   },
 });
+
+const resetSlice = (state) => {
+  state.sessionInformation = {
+    sessionCode: null,
+    sessionId: null,
+    hostId: null,
+    hostName: null,
+  };
+  state.recordingState = initialState.recordingState;
+  state.controlState = initialState.controlState;
+  state.disableCallButton = false;
+  state.isConnected = false;
+  state.connectionStatus = "Idle";
+  state.error = null;
+  state.mediasoup = initialState.mediasoup;
+};
 
 export const {
   setSessionInformation,

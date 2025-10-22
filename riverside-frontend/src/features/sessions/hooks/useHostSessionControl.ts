@@ -7,14 +7,17 @@ import {
   setScreenShareState,
   startRecording as startRecordingState,
   stopRecording as stopRecordingState,
+  initializeSessionState,
 } from "../sessionSlice";
 import { useAppDispatch } from "../../../hooks/ReduxHooks";
 import useMediaRecorder from "./useMediaRecorder";
 import { useWebSocketHandler } from "./useSocketHandler";
 import { useMediasoup } from "./useMediasoup";
+import { useNavigate } from "react-router-dom";
 
 const useHostSessionControl = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const streamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -94,6 +97,15 @@ const useHostSessionControl = () => {
     onDisconnected,
   } = useMediasoup();
 
+  const handleSessionEnded = (msg: any) => {
+    console.log("Session ended by host:", msg);
+    // Navigate to dashboard and clear session without closing transport
+    navigate("/dashboard");
+    setTimeout(() => {
+      dispatch(initializeSessionState());
+    }, 10);
+  };
+
   const { socket, connectSocket } = useWebSocketHandler({
     sessionId: sessionInformation?.sessionId,
     token: localStorage.getItem("JWT") ?? "",
@@ -107,6 +119,7 @@ const useHostSessionControl = () => {
     onNewProducerJoined,
     onProducerPaused,
     onDisconnected,
+    onSessionEnded: handleSessionEnded,
   });
 
   const setupSession = () => {

@@ -93,7 +93,11 @@ export default function ParticipantView() {
                 stream={streamState.stream}
                 screenStreamState={screenStreamState.stream}
               />
-              <HostControls stream={streamState.stream} isHost={false} />
+              <HostControls
+                stream={streamState.stream}
+                isHost={false}
+                socket={socket}
+              />
             </div>
           </div>
         }

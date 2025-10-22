@@ -58,21 +58,6 @@ export default function AppSidebar({
       url: "/dashboard",
       icon: Home,
     },
-    {
-      title: "Record",
-      url: "/dashboard/record",
-      icon: Video,
-    },
-    {
-      title: "Calls",
-      url: "/dashboard/calls",
-      icon: Calendar,
-    },
-    {
-      title: "Recordings",
-      url: "/dashboard/recordings",
-      icon: Mic,
-    },
   ];
 
   const { user } = useSelector((state: RootState) => state.auth);

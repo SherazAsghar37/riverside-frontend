@@ -30,7 +30,7 @@ function SessionInfoCard({
 
   return (
     <>
-      <div className="p-2 bg-light-card rounded-xl max-w-[18rem] flex flex-col my-2">
+      <div className="p-2 bg-light-card rounded-xl w-[16rem] md:w-[18rem] flex-none flex flex-col my-2">
         {/* Video Placeholder */}
         <div className="w-full aspect-[1920/1080] bg-dark-card rounded-lg flex items-center justify-center h-40">
           <p className="text-muted-foreground text-[10px]">

@@ -6,14 +6,17 @@ import {
   setRecordingDuration,
   startRecording as startRecordingState,
   stopRecording as stopRecordingState,
+  initializeSessionState,
 } from "../sessionSlice";
 import { useAppDispatch } from "../../../hooks/ReduxHooks";
 import useMediaRecorder from "./useMediaRecorder";
 import { useWebSocketHandler } from "./useSocketHandler";
 import { useMediasoup } from "./useMediasoup";
+import { useNavigate } from "react-router-dom";
 
 const useParticipantSessionControl = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -40,11 +43,18 @@ const useParticipantSessionControl = () => {
     onReceiveTransportCreated,
     onConsumerCreated,
     onNewProducerJoined,
-    initializeStreamInsideMediasoup,
-    streams,
   } = useMediasoup();
 
-  const { socket, getRtpCapabilities } = useWebSocketHandler({
+  const handleSessionEnded = (msg: any) => {
+    console.log("Session ended by host:", msg);
+    // Navigate to dashboard and clear session without closing transport
+    navigate("/dashboard");
+    setTimeout(() => {
+      dispatch(initializeSessionState());
+    }, 10);
+  };
+
+  const { socket, connectSocket } = useWebSocketHandler({
     sessionId: sessionInformation?.sessionId,
     token: localStorage.getItem("JWT") ?? "",
 
@@ -55,6 +65,9 @@ const useParticipantSessionControl = () => {
     onReceiveTransportCreated,
     onConsumerCreated,
     onNewProducerJoined,
+    onProducerPaused: () => {},
+    onDisconnected: () => {},
+    onSessionEnded: handleSessionEnded,
   });
 
   const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
@@ -81,9 +94,8 @@ const useParticipantSessionControl = () => {
           setParams((prev) => ({ ...prev, track }));
         }
         setStream(stream);
-        initializeStreamInsideMediasoup(stream!, localParams!);
         initializeMediaRecorder(stream!);
-        getRtpCapabilities();
+        // RTP capabilities are requested automatically on socket join
       }
 
       return stream;
@@ -147,7 +159,6 @@ const useParticipantSessionControl = () => {
     videoRef,
     socket,
     mediaRecorder,
-    streams,
     startCall,
     startRecording,
     stopRecording,
