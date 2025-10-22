@@ -28,6 +28,8 @@ export default function HostView() {
     mediasoup,
   } = useSelector((state: RootState) => state.session);
 
+  const { auth } = useSelector((state: RootState) => state);
+
   //to validate if session exists or not yet started
   useEffect(() => {
     console.log("Session Code:", sessionCode);
@@ -38,6 +40,13 @@ export default function HostView() {
     }
     dispatch(joinSessionAsHost({ sessionCode: sessionCode }) as any);
   }, [sessionId, sessionCode, navigate]);
+
+  useEffect(() => {
+    if (sessionInformation?.hostId == null) {
+      console.log("Session Information:", sessionInformation);
+      navigate(`/join-session/host?session-code=${sessionCode}`);
+    }
+  }, [sessionInformation]);
 
   useEffect(() => {
     if (sessionInformation && mediasoup.setupDone) {
@@ -56,6 +65,7 @@ export default function HostView() {
   const {
     socket,
     streamState,
+    screenStreamState,
     connectSocket,
     setupSession,
     startRecording,
@@ -69,10 +79,17 @@ export default function HostView() {
     <div className="min-h-screen bg-background">
       <HostControlSidebar
         onInviteClick={() => setInviteOpen(true)}
+        isHost={true}
+        hostName={auth.user?.name}
         children={
-          <div className="bg-background min-h-screen flex flex-col">
-            <div className="flex flex-col flex-1 my-5">
-              <HostCallPreview stream={streamState.stream} />
+          <div className="bg-background flex flex-col overflow-hidden">
+            <div className="flex-1  max-h-[85vh] overflow-hidden px-3 pt-3">
+              <HostCallPreview
+                stream={streamState.stream}
+                screenStreamState={screenStreamState.stream}
+              />
+            </div>
+            <div className="flex-shrink-0">
               <HostControls stream={streamState.stream} isHost={true} />
             </div>
           </div>

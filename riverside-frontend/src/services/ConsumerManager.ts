@@ -4,9 +4,11 @@ import { useRef, useState } from "react";
 type ConsumerParams = {
   id: string;
   producerId: string;
+  producerName: string | undefined;
   kind: string;
   rtpParameters: any;
   consumer: Consumer;
+  joinTime?: Date;
 };
 
 type ConsumerMediaSource = {
@@ -49,6 +51,7 @@ const useConsumerManager = () => {
       producerId: string;
       kind: string;
       rtpParameters: any;
+      userName: string | undefined;
     }
   ): void => {
     const { track } = consumer;
@@ -65,9 +68,11 @@ const useConsumerManager = () => {
     const consumerParams: ConsumerParams = {
       id: params.id,
       producerId: params.producerId,
+      producerName: params.userName,
       kind: params.kind,
       rtpParameters: params.rtpParameters,
       consumer: consumer,
+      joinTime: new Date(),
     };
 
     let participantInfo = consumersInformation.current.get(participantId);
@@ -118,44 +123,40 @@ const useConsumerManager = () => {
    */
   const removeConsumer = (
     participantId: string,
-    consumerId: string,
+    source: string,
     kind: string
   ): void => {
+    const participantInfo = consumersInformation.current.get(participantId);
+    console.log(
+      `Removing ${kind} consumer for participant ${participantId} on stream ${source}`
+    );
+    if (!participantInfo) return;
+    const mediaSource = participantInfo.mediaSources.get(source);
+    console.log("Media source found:", mediaSource);
+    if (!mediaSource) return;
+    if (kind === "audio" && mediaSource.audioParams != null) {
+      var consumerId = mediaSource.audioParams.id;
+      const consumer = consumers.current.get(consumerId);
+      if (consumer) {
+        consumer.close();
+        consumers.current.delete(consumerId);
+      }
+      mediaSource.audioStream = null;
+      mediaSource.audioParams = null;
+    } else if (kind === "video" && mediaSource.videoParams != null) {
+      var consumerId = mediaSource.videoParams.id;
+      const consumer = consumers.current.get(consumerId);
+      if (consumer) {
+        consumer.close();
+        consumers.current.delete(consumerId);
+      }
+      mediaSource.videoStream = null;
+      mediaSource.videoParams = null;
+    }
     const consumer = consumers.current.get(consumerId);
     if (consumer) {
       consumer.close();
       consumers.current.delete(consumerId);
-    }
-
-    // Remove from participant information
-    const participantInfo = consumersInformation.current.get(participantId);
-    if (participantInfo) {
-      participantInfo.mediaSources.forEach(
-        (mediaSource: ConsumerMediaSource, source: string) => {
-          if (mediaSource) {
-            if (
-              kind === "audio" &&
-              mediaSource.audioParams?.id === consumerId
-            ) {
-              // Remove audio stream and params
-              mediaSource.audioStream = null;
-              mediaSource.audioParams = null;
-            } else if (
-              kind === "video" &&
-              mediaSource.videoParams?.id === consumerId
-            ) {
-              // Remove video stream and params
-              mediaSource.videoStream = null;
-              mediaSource.videoParams = null;
-            }
-
-            // If both audio and video params are null, remove the entire media source
-            if (!mediaSource.audioParams && !mediaSource.videoParams) {
-              participantInfo.mediaSources.delete(source);
-            }
-          }
-        }
-      );
     }
 
     // Notify that values have been updated

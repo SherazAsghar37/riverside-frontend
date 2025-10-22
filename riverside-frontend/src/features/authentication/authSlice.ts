@@ -4,6 +4,7 @@ import { loginApi } from "./authApi";
 interface User {
   name: string;
   email: string;
+  id: string;
   token: string;
 }
 

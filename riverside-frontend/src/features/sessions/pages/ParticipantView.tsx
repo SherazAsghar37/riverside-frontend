@@ -26,16 +26,13 @@ export default function ParticipantView() {
 
   const {
     isConnected,
-    connectionStatus,
-    error,
+
     sessionInformation,
     mediasoup,
   } = useSelector((state: RootState) => state.session);
 
   //to validate if session exists or not yet started
   useEffect(() => {
-    console.log("Session Code:", sessionCode);
-    console.log("Session ID:", sessionId);
     if (!sessionCode) {
       navigate("/");
       return;
@@ -44,15 +41,28 @@ export default function ParticipantView() {
   }, [sessionId, sessionCode, navigate]);
 
   useEffect(() => {
-    if (sessionInformation && mediasoup.setupDone) {
+    if (sessionInformation?.hostId == null) {
+      console.log("Session Information:", sessionInformation);
+      navigate(`/join-session?session-code=${sessionCode}`);
+    }
+  }, [sessionInformation]);
+
+  useEffect(() => {
+    if (
+      sessionInformation?.hostId != null &&
+      sessionInformation.sessionId != null &&
+      mediasoup.setupDone
+    ) {
       setupSession();
-      console.log("herree");
     }
   }, [mediasoup]);
 
   useEffect(() => {
-    console.log("isConnected changed: ", sessionInformation);
-    if (!isConnected && sessionInformation?.sessionId != null) {
+    if (
+      !isConnected &&
+      sessionInformation?.sessionId != null &&
+      sessionInformation?.hostId != null
+    ) {
       connectSocket();
     }
   }, [isConnected, sessionInformation]);
@@ -60,6 +70,7 @@ export default function ParticipantView() {
   const {
     socket,
     streamState,
+    screenStreamState,
     connectSocket,
     setupSession,
     startRecording,
@@ -73,10 +84,15 @@ export default function ParticipantView() {
     <div className="min-h-screen bg-background">
       <HostControlSidebar
         onInviteClick={() => setInviteOpen(true)}
+        hostName={sessionInformation?.hostName}
+        isHost={false}
         children={
           <div className="bg-background min-h-screen flex flex-col">
-            <div className="flex flex-col flex-1 my-5">
-              <HostCallPreview stream={streamState.stream} />
+            <div className="flex max-h-[85vh] flex-col flex-1 my-5">
+              <HostCallPreview
+                stream={streamState.stream}
+                screenStreamState={screenStreamState.stream}
+              />
               <HostControls stream={streamState.stream} isHost={false} />
             </div>
           </div>

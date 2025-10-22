@@ -11,11 +11,13 @@ interface CreateSessionInformationProps {
   onAllowAccess?: () => void;
   camBlocked: boolean;
   micBlocked: boolean;
+  hostName?: string;
 }
 function CreateSessionInformation({
   onAllowAccess,
   camBlocked,
   micBlocked,
+  hostName,
 }: CreateSessionInformationProps) {
   const { user } = useSelector((state: RootState) => state.auth);
   const { sessionInformation } = useSelector(
@@ -84,13 +86,17 @@ function CreateSessionInformation({
     <>
       <div>
         <p className="text-muted-foreground text-[14px] mb-1">
-          You're about to join {Utils.capitalize(user?.name ?? "")}'s Studio
+          You're about to join{" "}
+          {Utils.capitalize(sessionInformation?.hostName ?? hostName ?? "")}'s
+          Studio
         </p>
         <h1 className="text-2xl font-bold text-white mb-6">
           Let's check your cam and mic
         </h1>
         <div className="mb-4 bg-card px-4 py-[0.5rem] rounded-lg flex justify-between items-center">
-          <p className="text-[14px]">{Utils.capitalize(user?.name ?? "")}</p>
+          <p className="text-[14px]">
+            {Utils.capitalize(sessionInformation?.hostName ?? hostName ?? "")}
+          </p>
           <p className="bg-[var(--light-card)] px-3 py-1 rounded-[4px] text-[13px] text-[var(--muted-foreground)]">
             Host
           </p>

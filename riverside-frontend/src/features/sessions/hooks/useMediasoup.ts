@@ -2,10 +2,11 @@ import ConsumerManager from "@/services/ConsumerManager";
 import { Device } from "mediasoup-client";
 import { type Consumer } from "mediasoup-client/types";
 import { useEffect, useRef, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setMediasoupSetupDone } from "../sessionSlice";
 import useConsumerManager from "@/services/ConsumerManager";
 import { useConsumerContext } from "../contexts/ConsumerContext";
+import { RootState } from "@/app/store";
 
 type Params = {
   encodings: any;
@@ -239,6 +240,18 @@ const useMediasoup = () => {
     return localProducer;
   };
 
+  const pauseProducingAudio = () => {
+    if (audioProducerRef.current) {
+      audioProducerRef.current.pause();
+    }
+  };
+
+  const resumeProducingAudio = () => {
+    if (audioProducerRef.current) {
+      audioProducerRef.current.resume();
+    }
+  };
+
   const produceCamera = async (stream: MediaStream, params: Params) => {
     if (cameraProducerRef.current) {
       console.log("Camera producer already exists");
@@ -303,16 +316,73 @@ const useMediasoup = () => {
 
   const stopProducingScreen = () => {
     if (screenProducerRef.current) {
-      screenProducerRef.current.close();
-      screenProducerRef.current = null;
-
       wsRef.current?.send(
         JSON.stringify({
           type: "closeProducer",
           producerId: screenProducerRef.current?.id,
+          source: "screen",
+          kind: "video",
         })
       );
+      screenProducerRef.current.close();
+      screenProducerRef.current = null;
     }
+  };
+
+  const stopProducingScreenAudio = () => {
+    if (screenAudioProducerRef.current) {
+      wsRef.current?.send(
+        JSON.stringify({
+          type: "closeProducer",
+          source: "screen",
+          kind: "audio",
+          producerId: screenAudioProducerRef.current?.id,
+        })
+      );
+      screenAudioProducerRef.current.close();
+      screenAudioProducerRef.current = null;
+    }
+  };
+
+  const pauseProducing = (producer: any, source: string, kind: string) => {
+    wsRef.current?.send(
+      JSON.stringify({
+        type: "pauseProducer",
+        producerId: producer.id,
+        source,
+        kind,
+      })
+    );
+  };
+
+  const resumeProducing = (producer: any, source: string, kind: string) => {
+    wsRef.current?.send(
+      JSON.stringify({
+        type: "resumeProducer",
+        producerId: producer.id,
+        source,
+        kind,
+      })
+    );
+  };
+
+  const pauseProducingCamera = () => {
+    if (cameraProducerRef.current) {
+      cameraProducerRef.current.pause();
+      pauseProducing(cameraProducerRef.current, "camera", "video");
+    }
+  };
+  const resumeProducingCamera = () => {
+    if (cameraProducerRef.current) {
+      cameraProducerRef.current.resume();
+      resumeProducing(cameraProducerRef.current, "camera", "video");
+    }
+  };
+
+  const onProducerPaused = (msg: any) => {
+    console.log("Producer paused:", msg);
+    const { userId, source, kind } = msg.data;
+    removeConsumer(userId, source, kind);
   };
 
   const onProducerCreated = async (msg: any, ws: WebSocket) => {
@@ -321,6 +391,8 @@ const useMediasoup = () => {
       pendingProduceCallback({ id: msg.data });
       pendingProduceCallback = null;
     }
+
+
   };
 
   const onNewProducerJoined = async (ws: WebSocket, msg: any) => {
@@ -332,6 +404,7 @@ const useMediasoup = () => {
         producerId: msg.data.id,
         kind: msg.data.kind,
         participantId: msg.data.userId,
+        userName: msg.data.userName,
         appData: msg.data.appData,
         rtpCapabilities: JSON.stringify(rtpCapabilitiesRef.current),
       })
@@ -347,6 +420,7 @@ const useMediasoup = () => {
         transportId: consumerTransportRef.current?.id,
         producerId: msg.id,
         kind: msg.kind,
+        userName: msg.userName,
         appData: msg.appData,
         participantId: msg.userId,
         rtpCapabilities: JSON.stringify(rtpCapabilitiesRef.current),
@@ -390,6 +464,7 @@ const useMediasoup = () => {
         producerId: params.producerId,
         kind: kind,
         rtpParameters: rtpParameters,
+        userName: params.userName,
       });
 
       // Resume consumer
@@ -402,6 +477,16 @@ const useMediasoup = () => {
       track.onended = () => {
         removeConsumer(participantId, consumer.id, kind);
       };
+
+      consumer.on("producerpause", () => {
+        console.log("Remote user paused video");
+        // Client UI can show "camera off" icon
+      });
+
+      consumer.on("producerresume", () => {
+        console.log("Remote user resumed video");
+        // Client UI shows video again
+      });
 
       console.log(
         `Consumer created and managed for ${participantId}  ${kind})`
@@ -427,12 +512,18 @@ const useMediasoup = () => {
     onNewProducerJoined,
     onConsumerCreated,
     produceAudio,
+    pauseProducingAudio,
+    resumeProducingAudio,
     produceCamera,
+    stopProducingCamera,
+    pauseProducingCamera,
+    resumeProducingCamera,
     produceScreen,
     produceScreenAudio,
-    stopProducingCamera,
     stopProducingScreen,
+    stopProducingScreenAudio,
     onDisconnected,
+    onProducerPaused,
     audioProducerRef,
     cameraProducerRef,
     screenProducerRef,

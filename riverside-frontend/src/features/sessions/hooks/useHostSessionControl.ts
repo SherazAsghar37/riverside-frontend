@@ -4,6 +4,7 @@ import type { RootState } from "../../../app/store";
 import {
   setDisableCallButton,
   setRecordingDuration,
+  setScreenShareState,
   startRecording as startRecordingState,
   stopRecording as stopRecordingState,
 } from "../sessionSlice";
@@ -19,6 +20,9 @@ const useHostSessionControl = () => {
   const screenStreamRef = useRef<MediaStream | null>(null);
 
   const [streamState, setStreamState] = useState<{
+    stream: MediaStream | null;
+  }>({ stream: null });
+  const [screenStreamState, setScreenStreamState] = useState<{
     stream: MediaStream | null;
   }>({ stream: null });
 
@@ -42,14 +46,9 @@ const useHostSessionControl = () => {
     },
   });
 
-  const {
-    recordingState,
-    sessionInformation,
-    disableCallButton,
-    controlState,
-    isConnected,
-    mediasoup,
-  } = useSelector((state: RootState) => state.session);
+  const { recordingState, sessionInformation, controlState } = useSelector(
+    (state: RootState) => state.session
+  );
 
   const isRecording = recordingState.isRecording;
 
@@ -60,6 +59,10 @@ const useHostSessionControl = () => {
   useEffect(() => {
     onAudioToggle();
   }, [controlState.isMuted]);
+
+  useEffect(() => {
+    onScreenShareToggle();
+  }, [controlState.isScreenSharing]);
 
   useEffect(() => {
     InitStream();
@@ -76,10 +79,18 @@ const useHostSessionControl = () => {
     onReceiveTransportCreated,
     onConsumerCreated,
     onNewProducerJoined,
+    onProducerPaused,
     produceAudio,
+    pauseProducingAudio,
+    resumeProducingAudio,
     produceCamera,
+    pauseProducingCamera,
+    resumeProducingCamera,
+    produceScreen,
+    produceScreenAudio,
     stopProducingScreen,
-    stopProducingCamera,
+    stopProducingScreenAudio,
+
     onDisconnected,
   } = useMediasoup();
 
@@ -94,6 +105,7 @@ const useHostSessionControl = () => {
     onReceiveTransportCreated,
     onConsumerCreated,
     onNewProducerJoined,
+    onProducerPaused,
     onDisconnected,
   });
 
@@ -130,9 +142,23 @@ const useHostSessionControl = () => {
     }
   };
 
+  const initScreenStream = async () => {
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+
+      screenStreamRef.current = screenStream;
+      setScreenStreamState({ stream: screenStream });
+      return screenStream;
+    } catch (error) {
+      console.error("Error accessing display media:", error);
+    }
+  };
+
   const startProducingAudio = async () => {
     try {
-      console.log("here in start producing audio");
       const stream = await InitStream();
       const track = stream.getAudioTracks()[0];
       const localParams = { ...audioParams, track };
@@ -143,25 +169,43 @@ const useHostSessionControl = () => {
   };
 
   const onAudioToggle = () => {
-    if (!controlState.isMuted) {
+    if (controlState.isMuted) {
+      console.log("Disabling audio tracks");
       streamRef.current
         ?.getAudioTracks()
         .forEach((track) => (track.enabled = false));
+      pauseProducingAudio();
     } else {
       streamRef.current
         ?.getAudioTracks()
         .forEach((track) => (track.enabled = true));
+      resumeProducingAudio();
     }
+    setStreamState({ stream: streamRef.current });
   };
 
-  const onCameraToggle = () => {
-    if (!controlState.isCameraOff && mediasoup.setupDone) {
-      console.log("here in a camera toggle");
-      startProducingCamera();
+  const onCameraToggle = async () => {
+    if (controlState.isCameraOff) {
+      if (streamRef.current && streamRef.current.getVideoTracks().length > 0) {
+        streamRef.current
+          .getVideoTracks()
+          .forEach((track) => (track.enabled = false));
+        pauseProducingCamera();
+      }
     } else {
-      streamRef.current
-        ?.getVideoTracks()
-        .forEach((track) => (track.enabled = false));
+      if (
+        !streamRef.current ||
+        streamRef.current.getVideoTracks().length === 0
+      ) {
+        await startProducingCamera();
+      } else {
+        streamRef.current
+          .getVideoTracks()
+          .forEach((track) => (track.enabled = true));
+
+        resumeProducingCamera();
+        setStreamState({ stream: streamRef.current });
+      }
     }
   };
 
@@ -174,6 +218,74 @@ const useHostSessionControl = () => {
       produceCamera(stream, localParams);
     } catch (error) {
       console.error("Error in producing camera:", error);
+    }
+  };
+
+  const startProducingScreen = async (screenStream: MediaStream) => {
+    try {
+      const track = screenStream.getVideoTracks()[0];
+      if (track) {
+        track.onended = () => {
+          dispatch(setScreenShareState(false) as any);
+        };
+      }
+      const localParams = { ...videoParams, track };
+      produceScreen(screenStream, localParams);
+    } catch (error) {
+      console.error("Error in producing screen:", error);
+    }
+  };
+
+  const startProducingScreenAudio = async (screenStream: MediaStream) => {
+    try {
+      const audioTracks = screenStream.getAudioTracks();
+
+      if (!audioTracks || audioTracks.length === 0) {
+        console.log(
+          "No audio track found in the shared screen — skipping audio production."
+        );
+        return;
+      }
+
+      const track = audioTracks[0];
+
+      // Sometimes a track may exist but be 'muted' or 'inactive'
+      if (track.readyState === "ended" || track.muted) {
+        console.log("Audio track is not active or muted — skipping.");
+        return;
+      }
+
+      const localAudioParams = { ...audioParams, track };
+      await produceScreenAudio(screenStream, localAudioParams);
+    } catch (error) {
+      console.error("Error in producing screen with audio:", error);
+    }
+  };
+
+  const onScreenShareToggle = async () => {
+    if (controlState.isScreenSharing) {
+      console.log("Starting Screen Share");
+      const screenStream = await initScreenStream();
+      startProducingScreen(screenStream);
+      startProducingScreenAudio(screenStream);
+    } else {
+      console.log("Stopping Screen Share");
+
+      // Stop producing logic
+      stopProducingScreen();
+      const audioTracks = streamRef.current.getAudioTracks();
+
+      if (audioTracks && audioTracks.length === 0) {
+        stopProducingScreenAudio();
+      }
+
+      // Properly stop screen capture tracks
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      screenStreamRef.current = null;
+      setScreenStreamState({ stream: null });
     }
   };
 
@@ -232,6 +344,7 @@ const useHostSessionControl = () => {
   return {
     socket,
     streamState,
+    screenStreamState,
     connectSocket,
     setupSession,
     startProducingCamera,

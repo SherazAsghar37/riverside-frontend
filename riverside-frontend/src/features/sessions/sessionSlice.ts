@@ -115,7 +115,12 @@ const sessionSlice = createSlice({
   initialState,
   reducers: {
     initializeSessionState(state) {
-      state.sessionInformation = null;
+      state.sessionInformation = {
+        sessionCode: null,
+        sessionId: null,
+        hostId: null,
+        hostName: null,
+      };
       state.recordingState = initialState.recordingState;
       state.controlState = initialState.controlState;
       state.disableCallButton = false;
@@ -189,25 +194,29 @@ const sessionSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(joinSessionAsHost.fulfilled, (state, action) => {
       console.log("Join session as host fulfilled:", action.payload);
-      state.sessionInformation = action.payload;
+      state.sessionInformation.sessionCode = action.payload.sessionCode;
+      state.sessionInformation.sessionId = action.payload.sessionId;
       state.error = null;
     });
     builder.addCase(joinSessionAsHost.rejected, (state, action) => {
-      state.sessionInformation = null;
+      state.sessionInformation.sessionCode = null;
+      state.sessionInformation.sessionId = null;
       state.error = action.payload as string;
     });
     builder.addCase(joinSessionAsParticipant.fulfilled, (state, action) => {
       console.log("Join session as participant fulfilled:", action.payload);
-      state.sessionInformation = action.payload;
+      state.sessionInformation.sessionCode = action.payload.sessionCode;
+      state.sessionInformation.sessionId = action.payload.sessionId;
       state.error = null;
     });
     builder.addCase(joinSessionAsParticipant.rejected, (state, action) => {
-      state.sessionInformation = null;
+      state.sessionInformation.sessionCode = null;
+      state.sessionInformation.sessionId = null;
       state.error = action.payload as string;
     });
     builder.addCase(fetchSessionInformation.fulfilled, (state, action) => {
       console.log("Fetch session information fulfilled:", action.payload);
-      state.sessionInformation = action.payload.data;
+      state.sessionInformation = action.payload;
       state.error = null;
     });
     builder.addCase(fetchSessionInformation.rejected, (state, action) => {

@@ -14,6 +14,7 @@ interface UseWebSocketHandlerOptions {
   onReceiveTransportCreated?: (msg: any, ws: WebSocket) => Promise<void>;
   onConsumerCreated?: (ws: WebSocket, msg: any) => Promise<void>;
   onNewProducerJoined: (ws: WebSocket, msg: any) => void;
+  onProducerPaused: (msg: any) => void;
   onDisconnected: (msg: any) => void;
 }
 
@@ -28,6 +29,7 @@ export const useWebSocketHandler = ({
   onReceiveTransportCreated,
   onConsumerCreated,
   onNewProducerJoined,
+  onProducerPaused,
   onDisconnected,
 }: UseWebSocketHandlerOptions) => {
   const dispatch = useDispatch();
@@ -96,6 +98,9 @@ export const useWebSocketHandler = ({
           break;
         case "consumerCreated":
           onConsumerCreated?.(ws, msg);
+          break;
+        case "producerPaused":
+          onProducerPaused?.(msg);
           break;
         case "userDisconnected":
           onDisconnected?.(msg);

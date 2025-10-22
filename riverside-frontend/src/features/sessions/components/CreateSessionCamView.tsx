@@ -117,7 +117,7 @@ function CreateSessionCamView({
                 height={180}
                 autoPlay
                 muted
-                className="rounded-lg bg-black"
+                className="rounded-lg bg-black absolute top-0 left-0 object-cover w-full h-full"
               />
               <div className="absolute bottom-1 ">
                 <Button

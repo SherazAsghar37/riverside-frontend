@@ -50,7 +50,7 @@ export default function PreSessionConfiguration() {
   }, []);
 
   useEffect(() => {
-    if (!isCreatingSession && !isJoiningAsHost) {
+    if (!isCreatingSession) {
       if (!sessionCode) {
         navigate("/");
       } else {
@@ -76,6 +76,7 @@ export default function PreSessionConfiguration() {
             onAllowAccess={onAllowAccess}
             camBlocked={camBlocked}
             micBlocked={micBlocked}
+            hostName={isJoiningAsHost ? user?.name : null}
           />
 
           <CreateSessionCamView stream={stream} onAllowAccess={onAllowAccess} />

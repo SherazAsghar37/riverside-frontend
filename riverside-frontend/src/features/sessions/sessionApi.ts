@@ -45,5 +45,5 @@ export async function sessionInformationApi({
   sessionCode: string;
 }) {
   const response = await api.get(`sessions/information/${sessionCode}`);
-  return response;
+  return response.data;
 }

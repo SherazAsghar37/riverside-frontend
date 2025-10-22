@@ -11,7 +11,7 @@ export default function JoinSession() {
 
   async function handleJoinSession() {
     try {
-      const response = await joinSessionApi(sessionCode!);
+      const response = await joinSessionApi({ sessionCode });
       console.log("JOIN SESSIONS MESSAGE: ", response.data.msg);
       if (response.status === 200) {
         const sessionId = response.data.sessionId;

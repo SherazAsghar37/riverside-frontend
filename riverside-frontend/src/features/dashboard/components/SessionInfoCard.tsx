@@ -23,7 +23,7 @@ function SessionInfoCard({
 }: SessionInfoCardProps) {
   const navigate = useNavigate();
   const onJoin = () => {
-    navigate(`/join/host?sessionCode=${sessionCode}`, {
+    navigate(`/join-session/host?session-code=${sessionCode}`, {
       state: { sessionId: sessionId },
     });
   };
