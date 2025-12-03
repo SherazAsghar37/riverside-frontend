@@ -1,10 +1,10 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
 import {
   setDisableCallButton,
   setRecordingDuration,
-  startRecording as startRecordingState,
   stopRecording as stopRecordingState,
   initializeSessionState,
 } from "../sessionSlice";
@@ -21,16 +21,16 @@ const useParticipantSessionControl = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const [params, setParams] = useState({
-    encoding: [
-      { rid: "r0", maxBitrate: 100000, scalabilityMode: "S1T3" }, // Lowest quality layer
-      { rid: "r1", maxBitrate: 300000, scalabilityMode: "S1T3" }, // Middle quality layer
-      { rid: "r2", maxBitrate: 900000, scalabilityMode: "S1T3" }, // Highest quality layer
-    ],
-    codecOptions: { videoGoogleStartBitrate: 1000 },
-  });
+  // const [setParams] = useState({
+  //   encoding: [
+  //     { rid: "r0", maxBitrate: 100000, scalabilityMode: "S1T3" }, // Lowest quality layer
+  //     { rid: "r1", maxBitrate: 300000, scalabilityMode: "S1T3" }, // Middle quality layer
+  //     { rid: "r2", maxBitrate: 900000, scalabilityMode: "S1T3" }, // Highest quality layer
+  //   ],
+  //   codecOptions: { videoGoogleStartBitrate: 1000 },
+  // });
 
-  const { recordingState, sessionInformation, disableCallButton } = useSelector(
+  const { recordingState, sessionInformation } = useSelector(
     (state: RootState) => state.session
   );
   const isRecording = recordingState.isRecording;
@@ -54,7 +54,7 @@ const useParticipantSessionControl = () => {
     }, 10);
   };
 
-  const { socket, connectSocket } = useWebSocketHandler({
+  const { socket } = useWebSocketHandler({
     sessionId: sessionInformation?.sessionId,
     token: localStorage.getItem("JWT") ?? "",
 
@@ -86,12 +86,12 @@ const useParticipantSessionControl = () => {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
         });
-        let localParams = undefined;
+        // let localParams = undefined;
         if (videoRef.current) {
-          const track = stream.getVideoTracks()[0];
+          // const track = stream.getVideoTracks()[0];
           videoRef.current.srcObject = stream;
-          localParams = { ...params, track };
-          setParams((prev) => ({ ...prev, track }));
+          // localParams = { ...params, track };
+          // setParams((prev) => ({ ...prev, track }));
         }
         setStream(stream);
         initializeMediaRecorder(stream!);
@@ -135,7 +135,7 @@ const useParticipantSessionControl = () => {
         })
       );
       mediaRecorder.start(3000);
-      dispatch(startRecordingState());
+      // dispatch(startRecordingState());
     }
   };
 
@@ -159,6 +159,7 @@ const useParticipantSessionControl = () => {
     videoRef,
     socket,
     mediaRecorder,
+    stream,
     startCall,
     startRecording,
     stopRecording,

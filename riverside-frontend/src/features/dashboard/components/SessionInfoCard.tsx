@@ -42,7 +42,7 @@ function SessionInfoCard({
         <div className="flex flex-col flex-1 justify-between w-full">
           <div className="flex items-center justify-between mt-2 mb-3 w-full">
             <div className="flex gap-2">
-              {status === "Scheduled" ? (
+              {status === "SCHEDULED" ? (
                 <MdOutlineDateRange color="var(--muted-foreground)" />
               ) : (
                 <IoVideocamOutline color="var(--muted-foreground)" />
@@ -58,7 +58,9 @@ function SessionInfoCard({
               {status}
             </p>
           </div>
-          {status === "CREATED" ? (
+          {status === "CREATED" ||
+          status === "ONGOING" ||
+          status === "RECORDING" ? (
             <Button className="w-full" onClick={onJoin}>
               <Plus />
               Join

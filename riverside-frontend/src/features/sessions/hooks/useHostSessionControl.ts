@@ -1,19 +1,18 @@
-import { use, useEffect, useRef, useState } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
 import {
-  setDisableCallButton,
   setRecordingDuration,
   setScreenShareState,
-  startRecording as startRecordingState,
-  stopRecording as stopRecordingState,
   initializeSessionState,
 } from "../sessionSlice";
 import { useAppDispatch } from "../../../hooks/ReduxHooks";
-import useMediaRecorder from "./useMediaRecorder";
 import { useWebSocketHandler } from "./useSocketHandler";
 import { useMediasoup } from "./useMediasoup";
 import { useNavigate } from "react-router-dom";
+import useRecordingHandler from "./useRecordingHandler";
+import useMediaRecorder from "./useMediaRecorder";
 
 const useHostSessionControl = () => {
   const dispatch = useAppDispatch();
@@ -29,7 +28,7 @@ const useHostSessionControl = () => {
     stream: MediaStream | null;
   }>({ stream: null });
 
-  const [videoParams, setVideoParams] = useState({
+  const [videoParams] = useState({
     encodings: [
       { rid: "r0", maxBitrate: 100000, scalabilityMode: "S1T3" },
       { rid: "r1", maxBitrate: 300000, scalabilityMode: "S1T3" },
@@ -38,7 +37,7 @@ const useHostSessionControl = () => {
     codecOptions: { videoGoogleStartBitrate: 1000 },
   });
 
-  const [audioParams, setAudioParams] = useState({
+  const [audioParams] = useState({
     encodings: [
       { maxBitrate: 64000 }, // Single encoding for audio
     ],
@@ -72,8 +71,6 @@ const useHostSessionControl = () => {
     console.log("stream has initialized", streamRef.current);
   }, []);
 
-  const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
-
   const {
     onRTPCapabilitiesReceived,
     createDevice,
@@ -106,6 +103,11 @@ const useHostSessionControl = () => {
     }, 10);
   };
 
+  const { onStartRecording, onStopRecording } = useRecordingHandler({
+    screenStream: screenStreamState.stream,
+    cameraStream: streamState.stream,
+  });
+
   const { socket, connectSocket } = useWebSocketHandler({
     sessionId: sessionInformation?.sessionId,
     token: localStorage.getItem("JWT") ?? "",
@@ -120,6 +122,8 @@ const useHostSessionControl = () => {
     onProducerPaused,
     onDisconnected,
     onSessionEnded: handleSessionEnded,
+    onStartRecording: onStartRecording,
+    onStopRecording: onStopRecording,
   });
 
   const setupSession = () => {
@@ -321,38 +325,18 @@ const useHostSessionControl = () => {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const startRecording = () => {
-    //  initializeMediaRecorder(stream!);
-    if (mediaRecorder) {
-      socket?.send(
-        JSON.stringify({
-          type: "message",
-          content: {
-            message: "start-recording",
-            roomId: sessionInformation?.sessionId,
-          },
-        })
-      );
-      mediaRecorder.start(3000);
-      dispatch(startRecordingState());
-    }
-  };
+  const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
 
-  const stopRecording = () => {
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-      socket?.send(
-        JSON.stringify({
-          type: "message",
-          content: {
-            message: "stop-recording",
-            roomId: sessionInformation?.sessionId,
-          },
-        })
-      );
-      dispatch(stopRecordingState());
+  useEffect(() => {
+    if (recordingState.isRecording && streamRef.current) {
+      console.log("Recording started");
+      initializeMediaRecorder(streamRef.current!);
+    } else {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+      }
     }
-  };
+  }, [recordingState.isRecording, streamRef.current]);
 
   return {
     socket,
@@ -361,8 +345,6 @@ const useHostSessionControl = () => {
     connectSocket,
     setupSession,
     startProducingCamera,
-    startRecording,
-    stopRecording,
     formatDuration,
   };
 };

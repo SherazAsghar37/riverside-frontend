@@ -10,8 +10,12 @@ function Sessions() {
   useEffect(() => {
     async function runFetchAllSessions() {
       const response = await fetchAllSessionsApi();
-      console.log(response.data);
+      if(response.status==200){
+        console.log(response.data);
       setSessions(response.data.sessions);
+      }else{
+        console.log(response.data);
+      }
     }
     runFetchAllSessions();
   }, []);

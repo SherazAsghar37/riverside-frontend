@@ -1,6 +1,5 @@
 import axios from "axios";
 
-const token = localStorage.getItem("JWT");
 // const host = "https://d5f98db90077.ngrok-free.app";
 const ip = "192.168.100.16:8080";
 const host = `https://${ip}`;
@@ -14,56 +13,53 @@ export const publicApi = axios.create({
 
 export const api = axios.create({
   baseURL: baseURL,
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
 });
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("JWT");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    console.log("Error", error);
+    if (error.response?.status === 401) {
+      console.log("Unauthorized");
+      window.dispatchEvent(new Event("auth:unauthorized"));
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Session api's
 export async function fetchAllSessions() {
-  const response = await axios.get(`${host}/api/v1/sessions/get-all-sessions`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await api.get(`sessions/get-all-sessions`);
   return response;
 }
 
 export async function createSession(sessionName: string) {
-  const response = await axios.post(
-    `${host}/api/v1/sessions/create-session`,
-    { name: sessionName },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await api.post(`sessions/create-session`, {
+    name: sessionName,
+  });
   return response;
 }
 
-export async function joinSession(sessionCode: string | null) {
-  const response = await axios.post(
-    `${host}/api/v1/sessions/join-session/${sessionCode}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  return response;
-}
+// export async function joinSession(sessionCode: string | null) {
+//   const response = await api.post(
+//     `sessions/join-session/${sessionCode}`
+//   );
+//
+//   return response;
+// }
 
 export async function getSession(sessionCode: string | null) {
-  const response = await axios.get(
-    `${host}/api/v1/sessions/get-session/${sessionCode}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await api.get(`sessions/get-session/${sessionCode}`);
   console.log(response.data.session.tracks);
 
   return response;
@@ -90,15 +86,7 @@ export async function signUp(name: string, email: string, password: string) {
 
 // Nsender & NReceiver api's
 export async function sendChunksToBackend(formData: any) {
-  const response = await axios.post(
-    `${host}/api/v1/recordings/chunks`,
-    formData,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await api.post(`recordings/chunks`, formData);
   return response;
 }
 
@@ -107,26 +95,15 @@ export async function sendFinalCallToEndOfRecording(
   userType: string,
   sessionId: string
 ) {
-  const response = await axios.post(
-    `${host}/api/v1/recordings/merge-upload-s3`,
-    { sessionName: roomName, userType, sessionId },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await api.post(`recordings/merge-upload-s3`, {
+    sessionName: roomName,
+    userType,
+    sessionId,
+  });
   return response;
 }
 
 export async function getAllVideosApi(sessionId: string) {
-  const response = await axios.get(
-    `${host}/api/v1/recordings/get-session-videos/${sessionId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await api.get(`recordings/get-session-videos/${sessionId}`);
   return response;
 }

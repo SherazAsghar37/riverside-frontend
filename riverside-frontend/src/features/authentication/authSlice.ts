@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { loginApi } from "./authApi";
+import { loginApi, signUpApi } from "./authApi";
 
 interface User {
   name: string;
@@ -32,7 +32,7 @@ export const login = createAsyncThunk(
       const user = await loginApi(credentials);
       return user;
     } catch (err: any) {
-      return rejectWithValue(err.message || "Login failed");
+      return rejectWithValue(err.response.data.error || "Login failed");
     }
   }
 );
@@ -44,10 +44,10 @@ export const signUp = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const user = await loginApi(credentials);
+      const user = await signUpApi(credentials);
       return user;
     } catch (err: any) {
-      return rejectWithValue(err.message || "Signup failed");
+      return rejectWithValue(err.response.data.error || "Signup failed");
     }
   }
 );
@@ -71,7 +71,7 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state: AuthState, action) => {
         state.loading = false;
-        state.user = action.payload;
+        state.user = action.payload.data;
         // Persist user and token
         localStorage.setItem("user", JSON.stringify(state.user));
         localStorage.setItem("JWT", state.user.token);

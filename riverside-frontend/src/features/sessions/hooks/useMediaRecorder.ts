@@ -1,15 +1,9 @@
 import type { RootState } from "../../../app/store";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  sendChunksToBackendApi,
-  sendFinalCallToEndOfRecordingApi,
-} from "../sessionApi";
-import { setVideoUrl } from "../sessionSlice";
+import { useSelector } from "react-redux";
+import { sendChunksToBackendApi } from "../sessionApi";
 import { useState } from "react";
 
 const useMediaRecorder = () => {
-  const dispatch = useDispatch();
-
   const { sessionInformation } = useSelector(
     (state: RootState) => state.session
   );
@@ -30,7 +24,7 @@ const useMediaRecorder = () => {
       }
     };
     mediaRecorder.onstop = () => {
-      sendFinalCallToEndOfRecording();
+      // sendFinalCallToEndOfRecording();
     };
 
     setMediaRecorder(mediaRecorder);
@@ -48,17 +42,15 @@ const useMediaRecorder = () => {
     console.log(response);
   }
 
-  async function sendFinalCallToEndOfRecording() {
-    const response = await sendFinalCallToEndOfRecordingApi({
-      sessionCode: sessionInformation?.sessionCode || "",
-      userType: "sender",
-      sessionId: sessionInformation?.sessionId || "",
-    });
+  // async function sendFinalCallToEndOfRecording() {
+  //   const response = await sendFinalCallToEndOfRecordingApi({
+  //     sessionCode: sessionInformation?.sessionCode || "",
+  //   });
 
-    const data = response.data;
-    console.log("URL ", data.url);
-    dispatch(setVideoUrl(data.url));
-  }
+  //   const data = response.data;
+  //   console.log("URL ", data.url);
+  //   dispatch(setVideoUrl(data.url));
+  // }
 
   return { mediaRecorder, initializeMediaRecorder };
 };

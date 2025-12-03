@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
 import { BsRecord2 } from "react-icons/bs";
 import { BiMicrophone, BiMicrophoneOff } from "react-icons/bi";
@@ -14,21 +13,31 @@ import {
   setMuteState,
   setScreenShareState,
   initializeSessionState,
+  setIsLoading,
+  stopRecording,
+  setRecordingStartTime,
 } from "../sessionSlice";
-import { sendFinalCallToEndOfRecordingApi } from "../sessionApi";
+import {
+  sendFinalCallToEndOfRecordingApi,
+  startRecordingRequestApi,
+  stopRecordingRequestApi,
+} from "../sessionApi";
+import RenderTimer from "@/components/RenderTimer";
+import { useState, useRef, useEffect } from "react";
 
 interface CallControlsProps {
-  stream?: MediaStream;
   isHost: boolean;
   socket?: WebSocket | null;
 }
 
-function CallControls({ stream, isHost, socket }: CallControlsProps) {
-  const [deafenStatus, setDeafenStatus] = React.useState(false);
-  const [showEndOptions, setShowEndOptions] = React.useState(false);
-  const overlayRef = React.useRef<HTMLDivElement>(null);
+function CallControls({ isHost, socket }: CallControlsProps) {
+  const [deafenStatus, setDeafenStatus] = useState(false);
+  const [showEndOptions, setShowEndOptions] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-  const { controlState } = useSelector((state: RootState) => state.session);
+  const { controlState, recordingState } = useSelector(
+    (state: RootState) => state.session
+  );
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -37,7 +46,7 @@ function CallControls({ stream, isHost, socket }: CallControlsProps) {
     (state: RootState) => state.session
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         overlayRef.current &&
@@ -96,7 +105,9 @@ function CallControls({ stream, isHost, socket }: CallControlsProps) {
   const onLeave = () => {
     try {
       socket?.close();
-    } catch (_) {}
+    } catch (e) {
+      console.error("Failed to close socket connection", e);
+    }
     navigate("/dashboard");
     setTimeout(() => {
       dispatch(initializeSessionState());
@@ -107,7 +118,7 @@ function CallControls({ stream, isHost, socket }: CallControlsProps) {
     try {
       if (sessionInformation?.sessionCode && sessionInformation?.sessionId) {
         await sendFinalCallToEndOfRecordingApi({
-          sessionId: sessionInformation.sessionId,
+          sessionCode: sessionInformation.sessionCode,
         });
       }
     } catch (e) {
@@ -115,7 +126,9 @@ function CallControls({ stream, isHost, socket }: CallControlsProps) {
     } finally {
       try {
         socket?.close();
-      } catch (_) {}
+      } catch (e) {
+        console.error("Failed to close socket connection", e);
+      }
       navigate("/dashboard");
       setTimeout(() => {
         dispatch(initializeSessionState());
@@ -123,13 +136,75 @@ function CallControls({ stream, isHost, socket }: CallControlsProps) {
     }
   };
 
+  const onStartRecording = async () => {
+    try {
+      if (sessionInformation?.sessionCode && !recordingState.isLoading) {
+        dispatch(setIsLoading(true));
+        const response = await startRecordingRequestApi({
+          sessionCode: sessionInformation.sessionCode,
+        });
+
+        if (response.status === 200 || response.status === 204) {
+          const time = new Date(response.data.createdAt);
+          dispatch(setRecordingStartTime(time.getTime()) as any);
+        }
+      }
+    } catch (e) {
+      dispatch(setIsLoading(false));
+      console.error("Failed to start recording on server:", e);
+    }
+  };
+  const onStopRecording = async () => {
+    try {
+      if (
+        sessionInformation?.sessionCode &&
+        recordingState.isRecording &&
+        !recordingState.isLoading
+      ) {
+        dispatch(setIsLoading(true));
+        const response = await stopRecordingRequestApi({
+          sessionCode: sessionInformation.sessionCode,
+        });
+
+        if (response.status === 200 || response.status === 204) {
+          dispatch(stopRecording());
+        }
+      }
+    } catch (e) {
+      console.error("Failed to start recording on server:", e);
+    }
+  };
+
   return (
     <>
       <div className="flex justify-center items-center gap-2 p-2">
-        {isHost && (
+        {isHost &&
+          (recordingState.isRecording ? (
+            <Button
+              className="bg-red-600 hover:bg-red-400"
+              onClick={onStopRecording}
+              isLoading={recordingState?.isLoading}
+            >
+              <BsRecord2 className="!w-5 !h-7" />
+              <span>
+                <RenderTimer
+                  recordingStarTime={recordingState?.recordingStartTime}
+                />
+              </span>
+            </Button>
+          ) : (
+            <Button
+              className="bg-red-600 hover:bg-red-400"
+              onClick={onStartRecording}
+              isLoading={recordingState?.isLoading}
+            >
+              <BsRecord2 className="!w-5 !h-7" />
+              <span>Record</span>
+            </Button>
+          ))}
+        {!isHost && recordingState.isRecording && (
           <Button className="bg-red-600 hover:bg-red-400">
             <BsRecord2 className="!w-5 !h-7" />
-            <span>Record</span>
           </Button>
         )}
         <Button
@@ -157,9 +232,9 @@ function CallControls({ stream, isHost, socket }: CallControlsProps) {
           onClick={onDeafenStateChange}
         >
           {deafenStatus ? (
-            <HiOutlineSpeakerWave className="!w-5 !h-7" />
-          ) : (
             <HiOutlineSpeakerXMark color="red" className="!w-5 !h-7" />
+          ) : (
+            <HiOutlineSpeakerWave className="!w-5 !h-7" />
           )}
         </Button>
         <Button

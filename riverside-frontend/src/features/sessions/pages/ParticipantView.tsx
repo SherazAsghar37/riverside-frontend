@@ -3,16 +3,11 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { RootState } from "../../../app/store";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  joinSessionAsHost,
-  joinSessionAsParticipant,
-  setSessionInformation,
-} from "../sessionSlice";
+import {} from "../sessionSlice";
 import useHostSessionControl from "../hooks/useHostSessionControl";
 import HostControlSidebar from "../components/HostControlSidebar";
 import HostControls from "../components/HostControls";
 import HostCallPreview from "../components/HostCallPreview";
-import InviteModel from "../components/InviteModel";
 
 export default function ParticipantView() {
   const location = useLocation();
@@ -37,7 +32,7 @@ export default function ParticipantView() {
       navigate("/");
       return;
     }
-    dispatch(joinSessionAsParticipant({ sessionCode: sessionCode }) as any);
+    // dispatch(joinSessionAsParticipant({ sessionCode: sessionCode }) as any);
   }, [sessionId, sessionCode, navigate]);
 
   useEffect(() => {
@@ -45,7 +40,7 @@ export default function ParticipantView() {
       console.log("Session Information:", sessionInformation);
       navigate(`/join-session?session-code=${sessionCode}`);
     }
-  }, [sessionInformation]);
+  }, [sessionInformation, sessionCode]);
 
   useEffect(() => {
     if (

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setConnectionStatus, setIsConnected } from "../sessionSlice";
 import { wsBaseUrl } from "../../../api/api";
@@ -10,13 +10,15 @@ interface UseWebSocketHandlerOptions {
   onRTPCapabilitiesReceived?: (msg: any) => void;
   createDevice?: (ws: WebSocket, msg: any) => void;
   onSenderTransportCreated?: (msg: any, ws: WebSocket) => void;
-  onProducerCreated?: (msg: any, ws: WebSocket) => void;
+  onProducerCreated?: (msg: any) => void;
   onReceiveTransportCreated?: (msg: any, ws: WebSocket) => Promise<void>;
   onConsumerCreated?: (ws: WebSocket, msg: any) => Promise<void>;
   onNewProducerJoined: (ws: WebSocket, msg: any) => void;
   onProducerPaused: (msg: any) => void;
   onDisconnected: (msg: any) => void;
   onSessionEnded?: (msg: any) => void;
+  onStartRecording?: (msg: any) => Promise<void>;
+  onStopRecording?: (msg: any) => Promise<void>;
 }
 
 export const useWebSocketHandler = ({
@@ -33,6 +35,8 @@ export const useWebSocketHandler = ({
   onProducerPaused,
   onDisconnected,
   onSessionEnded,
+  onStartRecording,
+  onStopRecording,
 }: UseWebSocketHandlerOptions) => {
   const dispatch = useDispatch();
 
@@ -86,12 +90,15 @@ export const useWebSocketHandler = ({
           break;
         case "receiveTransportCreated":
           onReceiveTransportCreated?.(msg, ws);
+          if (msg.sessionRecordingId) {
+            onStartRecording?.({ data: { id: msg.sessionRecordingId } });
+          }
           break;
         case "senderTransportConnected":
           console.log("Transport connected");
           break;
         case "producerCreated":
-          onProducerCreated?.(msg, ws);
+          onProducerCreated?.(msg);
           break;
         case "receiveTransportConnected":
           break;
@@ -110,6 +117,12 @@ export const useWebSocketHandler = ({
         case "sessionEnded":
           console.log("Session ended message received");
           onSessionEnded?.(msg);
+          break;
+        case "startRecording":
+          onStartRecording?.(msg);
+          break;
+        case "stopRecording":
+          onStopRecording?.(msg);
           break;
         case "error":
           onSocketError?.(msg);

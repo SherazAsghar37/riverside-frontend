@@ -40,6 +40,7 @@ import { Input } from "./ui/input";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/app/store";
 import { logout } from "@/features/authentication/authSlice";
+import Utils from "@/app/utils";
 
 export default function AppSidebar({
   children,
@@ -61,12 +62,7 @@ export default function AppSidebar({
   ];
 
   const { user } = useSelector((state: RootState) => state.auth);
-  const avatar = !user
-    ? "-"
-    : user?.name.split(" ")[0].charAt(0).toUpperCase() +
-      (user?.name.split(" ").length > 1
-        ? user?.name.split(" ")[1].charAt(0).toUpperCase()
-        : "");
+  const avatar = Utils.avatarFromName(user!.name);
 
   // Choose sidebar variant
   const sidebarVariant = variant === "secondary" ? "inset" : "sidebar";

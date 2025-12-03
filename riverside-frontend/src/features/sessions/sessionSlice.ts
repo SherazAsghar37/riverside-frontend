@@ -3,11 +3,7 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import {
-  joinAsHostApi,
-  joinSessionApi,
-  sessionInformationApi,
-} from "./sessionApi";
+import { sessionInformationApi } from "./sessionApi";
 
 interface SessionState {
   sessionInformation: SessionInformation | null;
@@ -36,15 +32,21 @@ interface SessionInformation {
   sessionCode: string;
   hostId?: string;
   hostName?: string;
+  status?: string;
+  sessionRecordingId?: string;
+  startTime?: number;
 }
 
 interface RecordingState {
   isRecording: boolean;
   recordingDuration: number;
-  loaderStopRecording: boolean;
+  isLoading: boolean;
   videoUrl?: string;
   isMerged?: boolean;
   startRecordingSignalFromHost?: boolean;
+  recordingStartTime?: number;
+  recordingSessionId: string;
+  recordingParticipantId: string;
 }
 
 const initialState: SessionState = {
@@ -65,47 +67,28 @@ const initialState: SessionState = {
   recordingState: {
     isRecording: false,
     recordingDuration: 0,
-    loaderStopRecording: false,
+    isLoading: false,
     isMerged: false,
+    recordingSessionId: "",
+    recordingParticipantId: "",
     //TODO: change it to false;
     startRecordingSignalFromHost: true,
   },
 };
 
-const joinSessionAsHost = createAsyncThunk(
-  "session/joinAsHost",
-  async (sessionCode: { sessionCode: string }, { rejectWithValue }) => {
-    try {
-      const response = await joinAsHostApi(sessionCode);
-      console.log("Join session as host response:", response);
-      return response;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
-    }
-  }
-);
-
-const joinSessionAsParticipant = createAsyncThunk(
-  "session/joinAsParticipant",
-  async (sessionCode: { sessionCode: string }, { rejectWithValue }) => {
-    try {
-      const response = await joinSessionApi(sessionCode);
-      return response;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
-    }
-  }
-);
-
 const fetchSessionInformation = createAsyncThunk(
   "session/fetchSessionInformation",
-  async (sessionCode: { sessionCode: string }, { rejectWithValue }) => {
+  async (
+    information: { sessionCode: string; isHost: boolean },
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await sessionInformationApi(sessionCode);
+      const response = await sessionInformationApi(information);
       console.log("Fetch session information response:", response);
       return response;
     } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
+      console.error("Error fetching session information:", err);
+      return rejectWithValue(err.response.data.error || "Something went wrong");
     }
   }
 );
@@ -124,19 +107,23 @@ const sessionSlice = createSlice({
     clearSessionInformation(state) {
       state.sessionInformation = null;
     },
-    startRecording(state) {
+    startRecording(state, action: PayloadAction<any>) {
       state.recordingState.isRecording = true;
+      state.recordingState.isLoading = false;
       state.recordingState.recordingDuration = 0;
+      state.recordingState.recordingParticipantId =
+        action.payload.participantId;
+      state.recordingState.recordingSessionId = action.payload.sessionId;
     },
     stopRecording(state) {
       state.recordingState.isRecording = false;
-      state.recordingState.loaderStopRecording = true;
+      state.recordingState.isLoading = false;
     },
     setRecordingDuration(state, action: PayloadAction<number>) {
       state.recordingState.recordingDuration = action.payload;
     },
-    setLoaderStopRecording(state, action: PayloadAction<boolean>) {
-      state.recordingState.loaderStopRecording = action.payload;
+    setIsLoading(state, action: PayloadAction<boolean>) {
+      state.recordingState.isLoading = action.payload;
     },
     setDisableCallButton(state, action: PayloadAction<boolean>) {
       state.disableCallButton = action.payload;
@@ -156,7 +143,7 @@ const sessionSlice = createSlice({
       state.isConnected = action.payload;
     },
     setVideoUrl(state, action: PayloadAction<string>) {
-      state.recordingState.loaderStopRecording = false;
+      state.recordingState.isLoading = false;
       state.recordingState.isRecording = false;
 
       if (state.sessionInformation) {
@@ -179,37 +166,54 @@ const sessionSlice = createSlice({
     setMediasoupSetupDone(state, action: PayloadAction<boolean>) {
       state.mediasoup.setupDone = action.payload;
     },
+    setRecordingStartTime(state, action: PayloadAction<number>) {
+      state.recordingState.recordingStartTime = action.payload;
+    },
   },
   extraReducers: (builder) => {
-    builder.addCase(joinSessionAsHost.fulfilled, (state, action) => {
-      console.log("Join session as host fulfilled:", action.payload);
-      state.sessionInformation.sessionCode = action.payload.sessionCode;
-      state.sessionInformation.sessionId = action.payload.sessionId;
-      state.error = null;
-    });
-    builder.addCase(joinSessionAsHost.rejected, (state, action) => {
-      state.sessionInformation.sessionCode = null;
-      state.sessionInformation.sessionId = null;
-      state.error = action.payload as string;
-    });
-    builder.addCase(joinSessionAsParticipant.fulfilled, (state, action) => {
-      console.log("Join session as participant fulfilled:", action.payload);
-      state.sessionInformation.sessionCode = action.payload.sessionCode;
-      state.sessionInformation.sessionId = action.payload.sessionId;
-      state.error = null;
-    });
-    builder.addCase(joinSessionAsParticipant.rejected, (state, action) => {
-      state.sessionInformation.sessionCode = null;
-      state.sessionInformation.sessionId = null;
-      state.error = action.payload as string;
-    });
+    // builder.addCase(joinSessionAsHost.fulfilled, (state, action) => {
+    //   console.log("Join session as host fulfilled:", action.payload);
+    //   state.sessionInformation.sessionCode = action.payload.sessionCode;
+    //   state.sessionInformation.sessionId = action.payload.sessionId;
+    //   state.error = null;
+    // });
+    // builder.addCase(joinSessionAsHost.rejected, (state, action) => {
+    //   state.sessionInformation.sessionCode = null;
+    //   state.sessionInformation.sessionId = null;
+    //   state.error = action.payload as string;
+    // });
+    // builder.addCase(joinSessionAsParticipant.fulfilled, (state, action) => {
+    //   console.log("Join session as participant fulfilled:", action.payload);
+    //   state.sessionInformation.sessionCode = action.payload.sessionCode;
+    //   state.sessionInformation.sessionId = action.payload.sessionId;
+    //   state.error = null;
+    // });
+    // builder.addCase(joinSessionAsParticipant.rejected, (state, action) => {
+    //   state.sessionInformation.sessionCode = null;
+    //   state.sessionInformation.sessionId = null;
+    //   state.error = action.payload as string;
+    // });
     builder.addCase(fetchSessionInformation.fulfilled, (state, action) => {
       console.log("Fetch session information fulfilled:", action.payload);
       state.sessionInformation = action.payload;
       state.error = null;
+      state.recordingState.isRecording = action.payload.status === "RECORDING";
+
+      const date = new Date(action.payload.updatedAt);
+      state.recordingState.recordingStartTime = date.getTime();
+
+      const startTime = new Date(
+        action.payload.scheduledAt
+          ? action.payload.scheduledAt
+          : action.payload.createdAt
+      );
+      state.sessionInformation!.startTime = startTime.getTime();
+      state.sessionInformation!.sessionRecordingId =
+        action.payload.sessionRecordingId;
     });
     builder.addCase(fetchSessionInformation.rejected, (state, action) => {
       state.sessionInformation = null;
+
       state.error = action.payload as string;
     });
   },
@@ -237,7 +241,7 @@ export const {
   startRecording,
   stopRecording,
   setRecordingDuration,
-  setLoaderStopRecording,
+  setIsLoading,
   setVideoUrl,
   setDisableCallButton,
   setConnectionStatus,
@@ -249,7 +253,8 @@ export const {
   setDeafenedState,
   setMediasoupSetupDone,
   initializeSessionState,
+  setRecordingStartTime,
 } = sessionSlice.actions;
 
 export default sessionSlice.reducer;
-export { joinSessionAsHost, fetchSessionInformation, joinSessionAsParticipant };
+export { fetchSessionInformation };

@@ -1,37 +1,14 @@
-import ConsumerManager from "@/services/ConsumerManager";
+/* eslint-disable react-hooks/exhaustive-deps */
 import { Device } from "mediasoup-client";
-import { type Consumer } from "mediasoup-client/types";
-import { useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useRef } from "react";
+import { useDispatch } from "react-redux";
 import { setMediasoupSetupDone } from "../sessionSlice";
-import useConsumerManager from "@/services/ConsumerManager";
 import { useConsumerContext } from "../contexts/ConsumerContext";
-import { RootState } from "@/app/store";
 
 type Params = {
   encodings: any;
   codecOptions: any;
   track?: MediaStreamTrack;
-};
-
-type ConsumerParams = {
-  id: string;
-  producerId: string;
-  kind: string;
-  rtpParameters: any;
-  consumer: Consumer;
-};
-
-type MediaSource = {
-  audioStream: MediaStream | null;
-  videoStream: MediaStream | null;
-  audioConsumer: ConsumerParams | null;
-  videoConsumer: ConsumerParams | null;
-};
-
-type ConsumerInformation = {
-  source1: MediaSource | null; //camera
-  source2: MediaSource | null; //screen
 };
 
 const useMediasoup = () => {
@@ -102,7 +79,7 @@ const useMediasoup = () => {
   const onSenderTransportCreated = async (msg: any, ws: WebSocket) => {
     console.log("Sender Transport Params: ", msg.data);
     const params = msg.data;
-    let transport = deviceRef.current?.createSendTransport(params);
+    const transport = deviceRef.current?.createSendTransport(params);
     producerTransportRef.current = transport;
 
     // connect event
@@ -163,7 +140,7 @@ const useMediasoup = () => {
   const onReceiveTransportCreated = async (msg: any, ws: WebSocket) => {
     console.log("Receive Transport Params: ", msg.data);
     const params = msg.data;
-    let transport = deviceRef.current?.createRecvTransport(params);
+    const transport = deviceRef.current?.createRecvTransport(params);
     consumerTransportRef.current = transport;
 
     //start consuming all producers
@@ -385,14 +362,12 @@ const useMediasoup = () => {
     removeConsumer(userId, source, kind);
   };
 
-  const onProducerCreated = async (msg: any, ws: WebSocket) => {
+  const onProducerCreated = async (msg: any) => {
     console.log("Producer created with ID:", msg.data);
     if (pendingProduceCallback) {
       pendingProduceCallback({ id: msg.data });
       pendingProduceCallback = null;
     }
-
-
   };
 
   const onNewProducerJoined = async (ws: WebSocket, msg: any) => {
@@ -446,7 +421,7 @@ const useMediasoup = () => {
       console.log();
 
       // Create consumer
-      let consumer = await consumerTransportRef.current?.consume({
+      const consumer = await consumerTransportRef.current?.consume({
         id: params.id,
         producerId: params.producerId,
         kind: kind,

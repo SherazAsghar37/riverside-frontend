@@ -15,7 +15,7 @@ export async function loginApi(credentials: LoginCredentials) {
   const response = await publicApi.post("user/login", credentials, {
     headers: {},
   });
-  return response.data;
+  return response;
 }
 
 export async function signUpApi(credentials: SignUpCredentials) {

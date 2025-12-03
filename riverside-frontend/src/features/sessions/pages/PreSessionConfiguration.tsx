@@ -12,6 +12,7 @@ import {
   fetchSessionInformation,
   initializeSessionState,
 } from "../sessionSlice";
+import Toast from "@/shared/components/Toast";
 
 export default function PreSessionConfiguration() {
   const navigate = useNavigate();
@@ -21,6 +22,12 @@ export default function PreSessionConfiguration() {
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const { user } = useSelector((state: RootState) => state.auth);
+  const sessionError = useSelector((state: RootState) => state.session.error);
+  const [toastOpen, setToastOpen] = useState(false);
+
+  useEffect(() => {
+    if (sessionError) setToastOpen(true);
+  }, [sessionError]);
 
   const isJoiningAsHost = location.pathname.includes("host");
   const isCreatingSession = location.pathname.includes("create-session");
@@ -54,7 +61,12 @@ export default function PreSessionConfiguration() {
       if (!sessionCode) {
         navigate("/");
       } else {
-        dispatch(fetchSessionInformation({ sessionCode: sessionCode }) as any);
+        dispatch(
+          fetchSessionInformation({
+            sessionCode: sessionCode,
+            isHost: isJoiningAsHost,
+          }) as any
+        );
       }
     }
   }, [sessionCode]);
@@ -76,11 +88,16 @@ export default function PreSessionConfiguration() {
             onAllowAccess={onAllowAccess}
             camBlocked={camBlocked}
             micBlocked={micBlocked}
-            hostName={isJoiningAsHost ? user?.name : null}
+            hostName={isJoiningAsHost || isCreatingSession ? user?.name : null}
           />
 
           <CreateSessionCamView stream={stream} onAllowAccess={onAllowAccess} />
         </div>
+        <Toast
+          open={toastOpen}
+          message={sessionError ?? ""}
+          onClose={() => setToastOpen(false)}
+        />
       </div>
     </>
   );

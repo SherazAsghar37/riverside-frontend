@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mic, Mail, Lock, AlertCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";

@@ -1,11 +1,12 @@
 import { RootState } from "@/app/store";
 import { Button } from "@/components/ui/button";
-import React, { useState } from "react";
-import { useSelector } from "react-redux";
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Utils from "@/app/utils";
 import { AlertCircle } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { createSessionApi } from "../sessionApi";
+import { setSessionInformation } from "../sessionSlice";
 
 interface CreateSessionInformationProps {
   onAllowAccess?: () => void;
@@ -25,6 +26,7 @@ function CreateSessionInformation({
   );
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
 
   const isJoiningAsHost = location.pathname.includes("host");
@@ -42,11 +44,11 @@ function CreateSessionInformation({
     setIsLoading(true);
     if (isCreatingSession) {
       await createSession();
-    } else if (isJoiningAsHost) {
+    } else if (isJoiningAsHost && sessionInformation.hostId != null) {
       navigate(`/host?session-code=${sessionCode}`, {
         state: { sessionId: location?.state?.sessionId },
       });
-    } else {
+    } else if (isJoiningAsParticipant && sessionInformation.hostId != null) {
       navigate(`/participant?session-code=${sessionCode}`, {
         state: { sessionId: location?.state?.sessionId },
       });
@@ -62,6 +64,15 @@ function CreateSessionInformation({
         console.log(data);
         const sessionCode = data.sessionCode;
         const sessionId = data.sessionId;
+        dispatch(
+          setSessionInformation({
+            sessionCode,
+            sessionId,
+            hostId: user?.id,
+            hostName: user?.name,
+            status: data.status,
+          } as any)
+        );
         navigate(`/host?session-code=${sessionCode}`, {
           state: { sessionId: sessionId },
         });
