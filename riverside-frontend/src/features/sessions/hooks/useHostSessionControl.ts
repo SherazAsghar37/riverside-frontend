@@ -6,6 +6,7 @@ import {
   setRecordingDuration,
   setScreenShareState,
   initializeSessionState,
+  stopRecording,
 } from "../sessionSlice";
 import { useAppDispatch } from "../../../hooks/ReduxHooks";
 import { useWebSocketHandler } from "./useSocketHandler";
@@ -96,6 +97,7 @@ const useHostSessionControl = () => {
 
   const handleSessionEnded = (msg: any) => {
     console.log("Session ended by host:", msg);
+    dispatch(stopRecording());
     // Navigate to dashboard and clear session without closing transport
     navigate("/dashboard");
     setTimeout(() => {
@@ -103,7 +105,12 @@ const useHostSessionControl = () => {
     }, 10);
   };
 
-  const { onStartRecording, onStopRecording } = useRecordingHandler({
+  const {
+    onStartRecording,
+    onStopRecording,
+    onStartSpecificRecording,
+    onStopSpecificRecording,
+  } = useRecordingHandler({
     screenStream: screenStreamState.stream,
     cameraStream: streamState.stream,
   });
@@ -325,18 +332,51 @@ const useHostSessionControl = () => {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const { mediaRecorder, initializeMediaRecorder } = useMediaRecorder();
+  const {
+    cameraRecorder,
+    screenRecorder,
+    startCameraRecording,
+    startScreenRecording,
+    stopCameraRecording,
+    stopScreenRecording,
+  } = useMediaRecorder();
 
   useEffect(() => {
-    if (recordingState.isRecording && streamRef.current) {
+    if (recordingState.isRecording) {
       console.log("Recording started");
-      initializeMediaRecorder(streamRef.current!);
+      if (streamRef.current && !cameraRecorder) {
+        startCameraRecording(streamRef.current);
+      }
+      if (screenStreamRef.current && !screenRecorder) {
+        startScreenRecording(screenStreamRef.current);
+      }
     } else {
-      if (mediaRecorder) {
-        mediaRecorder.stop();
+      if (cameraRecorder) {
+        stopCameraRecording();
+      }
+      if (screenRecorder) {
+        stopScreenRecording();
       }
     }
-  }, [recordingState.isRecording, streamRef.current]);
+  }, [
+    recordingState.isRecording,
+    streamRef.current,
+    screenStreamRef.current,
+    cameraRecorder,
+    screenRecorder,
+  ]);
+
+  useEffect(() => {
+    if (controlState.isScreenSharing && recordingState.isRecording) {
+      onStartSpecificRecording(
+        recordingState.recordingSessionId,
+        "SCREEN",
+        !!screenStreamRef.current?.getAudioTracks().length
+      );
+    } else if (!controlState.isScreenSharing && recordingState.isRecording) {
+      onStopSpecificRecording(recordingState.recordingSessionId, "SCREEN");
+    }
+  }, [controlState.isScreenSharing]);
 
   return {
     socket,

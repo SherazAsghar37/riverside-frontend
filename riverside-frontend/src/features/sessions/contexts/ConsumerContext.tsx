@@ -1,6 +1,5 @@
 import useConsumerManager from "@/services/ConsumerManager";
 import { createContext, useContext } from "react";
-import { useWebSocketHandler } from "../hooks/useSocketHandler";
 
 const ConsumerContext = createContext(null);
 

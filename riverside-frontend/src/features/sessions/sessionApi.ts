@@ -80,6 +80,7 @@ export async function startParticipantRecordingRequestApi({
   });
   return response;
 }
+
 export async function stopParticipantRecordingRequestApi({
   id,
 }: {
@@ -87,6 +88,43 @@ export async function stopParticipantRecordingRequestApi({
 }) {
   const response = await api.post(
     `participant-recordings/stop-recording/${id}`
+  );
+  return response;
+}
+
+export async function startParticipantSpecificRecordingRequestApi({
+  id,
+  containsAudio,
+  recordingType,
+}: {
+  id: string;
+  containsAudio: boolean;
+  recordingType: string;
+}) {
+  const response = await api.post(
+    `participant-recordings/start-specific-recording`,
+    {
+      sessionRecordingId: id,
+      containsAudio,
+      recordingType,
+    }
+  );
+  return response;
+}
+
+export async function stopParticipantSpecificRecordingRequestApi({
+  id,
+  recordingType,
+}: {
+  id: string;
+  recordingType: string;
+}) {
+  const response = await api.post(
+    `participant-recordings/stop-specific-recording`,
+    {
+      sessionRecordingId: id,
+      recordingType,
+    }
   );
   return response;
 }

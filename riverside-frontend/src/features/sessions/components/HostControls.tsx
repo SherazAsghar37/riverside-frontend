@@ -104,6 +104,7 @@ function CallControls({ isHost, socket }: CallControlsProps) {
 
   const onLeave = () => {
     try {
+      dispatch(stopRecording());
       socket?.close();
     } catch (e) {
       console.error("Failed to close socket connection", e);

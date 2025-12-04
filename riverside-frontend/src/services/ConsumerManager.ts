@@ -135,28 +135,26 @@ const useConsumerManager = () => {
     console.log("Media source found:", mediaSource);
     if (!mediaSource) return;
     if (kind === "audio" && mediaSource.audioParams != null) {
-      var consumerId = mediaSource.audioParams.id;
+      const consumerId = mediaSource.audioParams.id;
       const consumer = consumers.current.get(consumerId);
       if (consumer) {
         consumer.close();
         consumers.current.delete(consumerId);
       }
-      mediaSource.audioStream = null;
-      mediaSource.audioParams = null;
+      // mediaSource.audioStream = null;
+      // mediaSource.audioParams = null;
+      participantInfo.mediaSources.delete(source);
     } else if (kind === "video" && mediaSource.videoParams != null) {
-      var consumerId = mediaSource.videoParams.id;
+      const consumerId = mediaSource.videoParams.id;
       const consumer = consumers.current.get(consumerId);
+      console.log("Consumer found:", consumer, consumerId);
       if (consumer) {
         consumer.close();
         consumers.current.delete(consumerId);
       }
-      mediaSource.videoStream = null;
-      mediaSource.videoParams = null;
-    }
-    const consumer = consumers.current.get(consumerId);
-    if (consumer) {
-      consumer.close();
-      consumers.current.delete(consumerId);
+      participantInfo.mediaSources.delete(source);
+      // mediaSource.videoStream = null;
+      // mediaSource.videoParams = null;
     }
 
     // Notify that values have been updated

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import MediaSourceRenderer from "./MediaSourceRenderer";
 import { RootState } from "@/app/store";
 import { useSelector } from "react-redux";
@@ -12,8 +12,8 @@ interface HostCallPreviewProps {
 }
 
 function HostCallPreview({ stream, screenStreamState }: HostCallPreviewProps) {
-  const videoRefElement = React.useRef<HTMLVideoElement>(null);
-  const screenVideoRefElement = React.useRef<HTMLVideoElement>(null);
+  const videoRefElement = useRef<HTMLVideoElement>(null);
+  const screenVideoRefElement = useRef<HTMLVideoElement>(null);
   const [pinnedStream, setPinnedStream] = useState<string | null>(null);
 
   const {
@@ -65,7 +65,7 @@ function HostCallPreview({ stream, screenStreamState }: HostCallPreviewProps) {
     );
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (stream && videoRefElement.current) {
       if (videoRefElement.current) {
         videoRefElement.current.srcObject = null;
@@ -74,7 +74,7 @@ function HostCallPreview({ stream, screenStreamState }: HostCallPreviewProps) {
     }
   }, [controlState.isCameraOff, stream, screenStreamState, pinnedStream]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (screenStreamState && screenVideoRefElement.current) {
       if (screenVideoRefElement.current) {
         screenVideoRefElement.current.srcObject = null;
